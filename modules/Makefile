@@ -40,7 +40,7 @@ ifeq ($(MODULES_PL_SENSOR),y)
 subdir-y += PL_sensor
 endif
 ifeq ($(MODULES_PARAM),y)
-subdir-y += param
+#subdir-y += param
 endif
 ifeq ($(MODULES_BATTERY),y)
 subdir-y += battery
