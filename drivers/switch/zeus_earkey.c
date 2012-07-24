@@ -315,7 +315,7 @@ static irqreturn_t earkey_press_handler(int irq_num, void * dev)
 	return IRQ_HANDLED;
 }
 
-static int __devinit ear_key_driver_probe(struct platform_device *plat_dev)
+static int ear_key_driver_probe(struct platform_device *plat_dev)
 {
   struct input_dev *ear_key=NULL;
   int ear_key_irq=-1, err=0;
@@ -379,9 +379,9 @@ return err;
 
 }
 
-static int __devexit ear_key_driver_remove(struct platform_device *plat_dev)
+static int ear_key_driver_remove(struct platform_device *plat_dev)
 {
-  //struct input_dev *ip_dev= platform_get_drvdata(plat_dev);
+	//struct input_dev *ip_dev= platform_get_drvdata(plat_dev);
 	int ear_key_irq=0;
 
 	SEC_HEADSET_DBG("");

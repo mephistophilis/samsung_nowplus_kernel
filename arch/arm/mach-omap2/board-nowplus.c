@@ -31,7 +31,6 @@
 #include	<linux/input/matrix_keypad.h>
 
 #include	<linux/leds-bd2802.h>
-#include	<linux/max17040_battery.h>
 #include	<linux/input/synaptics_i2c_rmi4.h>
 
 #include	<mach/hardware.h>
@@ -178,6 +177,9 @@ extern	int	omap34xx_pad_set_config_lcd(u16	pad_pin,u16	pad_val);
 static	int	sec_switch_status	=	0;
 static	int	sec_switch_inited	=	0;
 
+#ifdef _FMC_DM_
+static int usb_access_lock;
+#endif
 
 #if	defined(CONFIG_USB_SWITCH_FSA9480)
 static	bool	fsa9480_jig_status	=	0;
@@ -453,12 +455,12 @@ static struct charger_device_config samsung_charger_config_data = {
 	.VF_CHECK_USING_ADC	=	false,	//	n.c.	no	adc	connected	to	battery	on	nowplus
 
 	/*	2.	ADCPORT	(ADCPORT	NUM)	*/
-	.VF_ADC_PORT	=	0,
+	.VF_ADC_PORT	=	4,
 
 
 	//	[	SUPPORT	CHG_ING	IRQ	FOR	CHECKING	FULL	]
 	/*	1.	ENABLE	(true,	flase)	*/
-	.SUPPORT_CHG_ING_IRQ	=	true,	//use	/CHRG	as	IRQ
+	.SUPPORT_CHG_ING_IRQ	=	false,	//use	/CHRG	as	IRQ
 
 #ifdef	CONFIG_USB_SWITCH_FSA9480
 	.register_callbacks	=	&sec_battery_register_callbacks,
@@ -468,9 +470,9 @@ static struct charger_device_config samsung_charger_config_data = {
 static	int	samsung_battery_config_data[]	=	{
 	//	[	SUPPORT	MONITORING	CHARGE	CURRENT	FOR	CHECKING	FULL	]
 	/*	1.	ENABLE	(true,	flase)	*/
-	false,	//nowplus	doesnt	supprot	charging	current	measurement
+	true,	//nowplus	doesnt	supprot	charging	current	measurement
 	/*	2.	ADCPORT	(ADCPORT	NUM)	*/
-	0,
+	4,
 
 
 	//	[	SUPPORT	MONITORING	TEMPERATURE	OF	THE	SYSTEM	FOR	BLOCKING	CHARGE	]
@@ -696,36 +698,47 @@ static	struct	platform_device	sec_device_dpram	=	{
 };
 
 //>>>	switch	>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-int	sec_switch_get_cable_status(void)
+int sec_switch_get_cable_status(void)
 {
-	return	set_cable_status;	
+	return set_cable_status;
 }
+
 // used in twl_power_off
 EXPORT_SYMBOL(sec_switch_get_cable_status);
 
-void	sec_switch_set_switch_status(int	val)
+void sec_switch_set_switch_status(int val)
 {
-	printk("%s	(switch_status	:	%d)\n",	__func__,	val);
+	printk("%s (switch_status : %d)\n", __func__, val);
 
-#if	defined(CONFIG_USB_SWITCH_FSA9480)
-	if(!sec_switch_inited)	{
+#if defined(CONFIG_USB_SWITCH_FSA9480)
+	if(!sec_switch_inited) {
 		fsa9480_enable_irq();
+
+#ifdef _FMC_DM_
+		if (sec_switch_status & USB_LOCK_MASK)
+			usb_access_lock = 1;
+#endif
+
 		/*
-			*	TI	CSR	OMAPS00222879:	"MP3	playback	current	consumption	is	very	high"
-			*	This	a	workaround	to	reduce	the	mp3	power	consumption	when	the	system
-			*	is	booted	without	USB	cable.
-			*/
+		 * TI CSR OMAPS00222879: "MP3 playback current consumption is very high"
+		 * This a workaround to reduce the mp3 power consumption when the system
+		 * is booted without USB cable.
+		 */
 		twl4030_phy_enable();
 
-		if(set_cable_status	!=	CABLE_TYPE_USB)
+#ifdef _FMC_DM_
+		if(usb_access_lock || (set_cable_status != CABLE_TYPE_USB))
+#else
+		if(set_cable_status != CABLE_TYPE_USB)
+#endif
 			twl4030_phy_disable();
 	}
 #endif
 
 	if(!sec_switch_inited)
-		sec_switch_inited	=	1;
+		sec_switch_inited = 1;
 
-	sec_switch_status	=	val;
+	sec_switch_status = val;
 }
 
 static	struct	sec_switch_platform_data	sec_switch_pdata	=	{
@@ -821,41 +834,35 @@ static	inline	void	__init	nowplus_init_power_key(void)
 
 static	inline	void	__init	nowplus_init_battery(void)
 {
-	if	(gpio_request(OMAP_GPIO_USBSW_NINT,	"OMAP_GPIO_USBSW_NINT")	<	0)	{
-		printk(KERN_ERR	"	request	OMAP_GPIO_USBSW_NINT	failed\n");
-		return;
+    //#if defined(CONFIG_FSA9480_MICROUSB)//me close
+#if defined(CONFIG_USB_SWITCH_FSA9480)
+	samsung_charger_resources[0].start = gpio_to_irq(OMAP_GPIO_USBSW_NINT);
+	samsung_charger_resources[1].start = gpio_to_irq(56); // NC
+#elif defined(CONFIG_MICROUSBIC_INTR)
+	samsung_charger_resources[0].start = IH_USBIC_BASE;    
+	samsung_charger_resources[1].start = IH_USBIC_BASE + 1;
+#endif
+	
+
+	if (gpio_request(OMAP_GPIO_CHG_ING_N, "charge full irq") < 0) {
+		printk(KERN_ERR "Failed to request GPIO%d for charge full IRQ\n",
+		       OMAP_GPIO_CHG_ING_N);
+		samsung_charger_resources[2].start = -1;
 	}
-	gpio_direction_input(OMAP_GPIO_USBSW_NINT);
-
-	if(gpio_request(OMAP_GPIO_CHG_ING_N,	"OMAP_GPIO_CHG_ING_N")	<	0	){
-			printk(KERN_ERR	"\n	FAILED	TO	REQUEST	GPIO	%d	\n",OMAP_GPIO_CHG_ING_N);
-			return;
-		}
-	gpio_direction_input(OMAP_GPIO_CHG_ING_N);
-
-	if(gpio_request(OMAP_GPIO_CHG_EN,	"OMAP_GPIO_CHG_EN")	<	0	){
-			printk(KERN_ERR	"\n	FAILED	TO	REQUEST	GPIO	%d	\n",OMAP_GPIO_CHG_EN);
-			return;
-		}
-
-	/*CHG_EN	low	or	high	depend	on	bootloader	configuration*/
-	if(gpio_get_value(OMAP_GPIO_CHG_EN))
-	{
-		gpio_direction_output(OMAP_GPIO_CHG_EN,	1);
+	else {
+		samsung_charger_resources[2].start = gpio_to_irq(OMAP_GPIO_CHG_ING_N);
+		//omap_set_gpio_debounce( OMAP_GPIO_CHG_ING_N, 3 );
+		gpio_set_debounce( OMAP_GPIO_CHG_ING_N, 3 );
 	}
-	else
-	{
-		gpio_direction_output(OMAP_GPIO_CHG_EN,	0);
+
+	if (gpio_request(OMAP_GPIO_CHG_EN, "Charge enable gpio") < 0) {
+		printk(KERN_ERR "Failed to request GPIO%d for charge enable gpio\n",
+		       OMAP_GPIO_CHG_EN);
+		samsung_charger_resources[3].start = -1;
+ 	}
+	else {
+		samsung_charger_resources[3].start = gpio_to_irq(OMAP_GPIO_CHG_EN);
 	}
-    
-	//	Line	903:		KUSB_CONN_IRQ	=	platform_get_irq(	pdev,	0	);
-	//	Line	923:		KTA_NCONN_IRQ	=	platform_get_irq(	pdev,	1	);
-	//	Line	938:		KCHG_ING_IRQ	=	platform_get_irq(	pdev,	2	);
-	//	Line	957:		KCHG_EN_GPIO	=	irq_to_gpio(	platform_get_irq(	pdev,	3	)	);
-
-	//	samsung_charger_resources[0].start	=	IH_USBIC_BASE;			//	is	usb	cable	connected	?
-	//	samsung_charger_resources[1].start	=	IH_USBIC_BASE	+	1;		//	is	charger	connected	?
-
     
 #if 0
 	if (gpio_request(OMAP_GPIO_USBSW_NINT, "usb switch irq") < 0) {
@@ -1311,83 +1318,41 @@ static	struct	twl4030_platform_data	__initdata	nowplus_twl_data	__initdata	=	{
 	.vpll2		=	&nowplus_vpll2,
 };
 
-#ifdef	CONFIG_BATTERY_MAX17040	//use	MAX17040	driver	for	charging
-
-static	int	nowplus_battery_online(void)	{
-	return !gpio_get_value(OMAP_GPIO_VF);
-	//return 1;
-};
-
-static	int	nowplus_charger_online(void)	{
-	// CABLE_TYPE_NONE = 0,
-	// CABLE_TYPE_USB,
-	// CABLE_TYPE_AC,
-	// CABLE_TYPE_IMPROPER_AC,
-	return sec_switch_get_cable_status();
-};
-
-static	int	nowplus_charger_enable(void)	{
-
-	if(	sec_switch_get_cable_status()	)
-	{
-		gpio_set_value(OMAP_GPIO_CHG_EN,	0);
-		set_irq_type	(OMAP_GPIO_IRQ(OMAP_GPIO_CHG_ING_N),	IRQ_TYPE_EDGE_RISING);
-		return	1;
-	}
-
-	return	0;
-};
-
-static	void	nowplus_charger_disable(void)
-{
-	set_irq_type(OMAP_GPIO_IRQ(OMAP_GPIO_CHG_ING_N),	IRQ_TYPE_NONE);
-	gpio_set_value(OMAP_GPIO_CHG_EN,	1);
-}
-
-static	int	nowplus_charger_done(void)
-{
-	return	0;
-}
-
-static	struct	max17040_platform_data	nowplus_max17040_data	=	{
-	.battery_online	=	&nowplus_battery_online,
-	.charger_online	=	&nowplus_charger_online,
-	.charger_enable	=	&nowplus_charger_enable,
-	.charger_done	=	&nowplus_charger_done,
-	.charger_disable	=	&nowplus_charger_disable,
-};
-#endif
-
 
 #ifdef	CONFIG_USB_SWITCH_FSA9480
 static	void	fsa9480_usb_cb(bool	attached)
 {
-	if(sec_switch_inited) {
-		if	(attached)
-				twl4030_phy_enable();
-			else
-				twl4030_phy_disable();
-	}
-	
-	set_cable_status	=	attached	?	CABLE_TYPE_USB	:	CABLE_TYPE_NONE;
+//#if defined(CONFIG_SAMSUNG_ARCHER_TARGET_SK)//me close
+	if(sec_switch_inited)
+//#endif
+#ifdef _FMC_DM_
+	if (attached && !usb_access_lock)
+#else
+	if (attached)
+#endif
+		twl4030_phy_enable();
+	else
+		twl4030_phy_disable();
 
-	if	(callbacks	&&	callbacks->set_cable)
-		callbacks->set_cable(callbacks,	set_cable_status);
+	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
+
+	if (callbacks && callbacks->set_cable)
+		callbacks->set_cable(callbacks, set_cable_status);
 }
 
 static	void	fsa9480_charger_cb(bool	attached)
 {
-	set_cable_status	=	attached	?	CABLE_TYPE_AC	:	CABLE_TYPE_NONE;
+	set_cable_status = attached ? CABLE_TYPE_AC : CABLE_TYPE_NONE;
 
-	if	(callbacks	&&	callbacks->set_cable)
-		callbacks->set_cable(callbacks,	set_cable_status);
+	if (callbacks && callbacks->set_cable)
+		callbacks->set_cable(callbacks, set_cable_status);
 }
 
 static	void	fsa9480_jig_cb(bool	attached)
 {
 	printk("%s	:	attached	(%d)\n",	__func__,	(int)attached);
 
-	fsa9480_jig_status	=	attached;
+	fsa9480_jig_status = attached;
 }
 
 static	void	fsa9480_deskdock_cb(bool	attached)
@@ -1454,16 +1419,10 @@ static	struct	i2c_board_info	__initdata	nowplus_i2c2_boardinfo[]	=	{
 		.irq	=	OMAP_GPIO_IRQ(OMAP_GPIO_USBSW_NINT),
 	},
 	{
-#ifdef	CONFIG_BATTERY_MAX17040
-			I2C_BOARD_INFO("max17040",	0x36),
-		.platform_data	=	&nowplus_max17040_data,
-#else   //	use	Samsung	driver
+   //	use	Samsung	driver
 		I2C_BOARD_INFO("secFuelgaugeDev",	0x36),
-#if	1	//(CONFIG_ARCHER_REV	>=	ARCHER_REV11)
-		//.flags	=	I2C_CLIENT_WAKE,
+		.flags	=	I2C_CLIENT_WAKE,
 		//.irq	=	OMAP_GPIO_IRQ(OMAP_GPIO_FUEL_INT_N),
-#endif
-#endif
 	},
 	{
 		I2C_BOARD_INFO("PL_driver",	0x44),

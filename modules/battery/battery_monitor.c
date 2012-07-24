@@ -1040,7 +1040,7 @@ static int battery_monitor_core( bool is_sleep )
 		if ( sec_bci.battery.monitor_duration > MONITOR_RECHG_VOL_DURATION )
 			sec_bci.battery.monitor_duration = MONITOR_RECHG_VOL_DURATION;
 
-		if ( sec_bci.battery.battery_level_vol <= 4120 )
+		if ( sec_bci.battery.battery_level_vol <= 4100 )
 		{
 			sec_bci.battery.confirm_recharge++;
 			if ( sec_bci.battery.confirm_recharge >= 2 )

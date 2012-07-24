@@ -375,7 +375,6 @@ static struct omap_volt_data omap34xx_vdd1_volt_data[] = {
 #endif
 };
 
-
 static struct omap_volt_data omap36xx_vdd1_volt_data[] = {
 	{.volt_nominal = 930000, .sr_errminlimit = 0xF4, .vp_errgain = 0x0C, .abb_type = NOMINAL_OPP},
 	{.volt_nominal = 1100000, .sr_errminlimit = 0xF9, .vp_errgain = 0x16, .abb_type = NOMINAL_OPP},

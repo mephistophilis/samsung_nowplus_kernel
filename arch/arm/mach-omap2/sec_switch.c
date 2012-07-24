@@ -32,7 +32,7 @@
 #include <linux/moduleparam.h>
 #include <plat/mux.h>
 
-
+#define _FMC_DM_
 #if defined(CONFIG_USB_SWITCH_FSA9480)
 extern void twl4030_phy_enable(void);
 extern void twl4030_phy_disable(void);
@@ -59,17 +59,21 @@ struct sec_switch_wq {
 	struct list_head entry;
 };
 
+#ifdef _FMC_DM_
+extern struct class *sec_class;
+#endif
 
 static int sec_switch_started;
 
 extern struct device *switch_dev;
-static int switchsel = USB_SEL_MASK | UART_SEL_MASK;
+static int switchsel=3;
 // Get SWITCH_SEL param value from kernel CMDLINE parameter.
 __module_param_call("", switchsel, param_set_int, param_get_int, &switchsel, 0, 0444);
 MODULE_PARM_DESC(switchsel, "Switch select parameter value.");
 
 
-static void usb_switch_mode(struct sec_switch_struct *secsw, int mode)
+static void usb_switch_mode(struct sec_switch_struct *secsw, int mode
+)
 {
 	if(mode == SWITCH_PDA)
 	{
@@ -230,32 +234,122 @@ static ssize_t disable_vbus_store(struct device *dev, struct device_attribute *a
 static DEVICE_ATTR(disable_vbus, 0664, disable_vbus_show, disable_vbus_store);
 
 
+#ifdef _FMC_DM_
+/* for sysfs control (/sys/class/sec/switch/.usb_lock/enable) */
+static ssize_t enable_show
+(
+	struct device *dev,
+	struct device_attribute *attr,
+	char *buf
+)
+{
+	struct sec_switch_struct *secsw = dev_get_drvdata(dev);
+	int usb_access_lock;
+
+	usb_access_lock = ((secsw->switch_sel & USB_LOCK_MASK) ? 1 : 0);
+
+	if(usb_access_lock) {
+		return snprintf(buf, PAGE_SIZE, "USB_LOCK");
+	} else {
+		return snprintf(buf, PAGE_SIZE, "USB_UNLOCK");
+	}
+}
+
+static ssize_t enable_store
+(
+	struct device *dev,
+	struct device_attribute *attr,
+	const char *buf,
+	size_t size
+)
+{
+	struct sec_switch_struct *secsw = dev_get_drvdata(dev);
+	int value;
+	int usb_access_lock;
+	int cable_state = CABLE_TYPE_NONE;
+
+	if (sscanf(buf, "%d", &value) != 1) {
+		printk(KERN_ERR "enable_store: Invalid value\n");
+		return -EINVAL;
+	}
+
+	if((value < 0) || (value > 1)) {
+		printk(KERN_ERR "enable_store: Invalid value\n");
+		return -EINVAL;
+	}
+
+	if (sec_get_param_value)
+		sec_get_param_value(__SWITCH_SEL, &(secsw->switch_sel));
+
+	usb_access_lock = ((secsw->switch_sel & USB_LOCK_MASK) ? 1 : 0);
+
+	if(value != usb_access_lock) {
+		if(secsw->pdata && secsw->pdata->get_cable_status)
+			cable_state = secsw->pdata->get_cable_status();
+
+		secsw->switch_sel &= ~USB_LOCK_MASK;
+
+		if(value == 1) {
+			secsw->switch_sel |= USB_LOCK_MASK;
+			if(cable_state == CABLE_TYPE_USB)
+				twl4030_phy_disable();
+		} else {
+			if(cable_state == CABLE_TYPE_USB)
+				twl4030_phy_enable();
+		}
+
+		if (sec_set_param_value) {
+			sec_set_param_value(__SWITCH_SEL, &(secsw->switch_sel));
+		}
+
+		// update shared variable.
+		if(secsw->pdata && secsw->pdata->set_switch_status)
+			secsw->pdata->set_switch_status(secsw->switch_sel);
+	}
+
+	return size;
+}
+
+static DEVICE_ATTR(enable, 0664, enable_show, enable_store);
+#endif
+
+
 static void sec_switch_init_work(struct work_struct *work)
 {
+    printk("%s : ------------------\n", __func__);
+
 	struct delayed_work *dw = container_of(work, struct delayed_work, work);
 	struct sec_switch_wq *wq = container_of(dw, struct sec_switch_wq, work_q);
 	struct sec_switch_struct *secsw = wq->sdata;
 	int usb_sel = 0;
 	int uart_sel = 0;
 	int ret = 0;
-#if 0
-    if (sec_get_param_value) {
-        sec_get_param_value(__SWITCH_SEL, &switchsel);
-        secsw->switch_sel = switchsel;
-        cancel_delayed_work(&wq->work_q);
-    } else {
-        if(!sec_switch_started) {
-            sec_switch_started = 1;
-            schedule_delayed_work(&wq->work_q, msecs_to_jiffies(3000));
-        } else {
-            schedule_delayed_work(&wq->work_q, msecs_to_jiffies(100));
-        }
-        return;
-    }
-#else
-	 secsw->switch_sel = switchsel;
-	 cancel_delayed_work(&wq->work_q);
+#if defined(CONFIG_SAMSUNG_ARCHER_TARGET_SK)
+	if (sec_get_param_value) {
+		sec_get_param_value(__SWITCH_SEL, &switchsel);
+		secsw->switch_sel = switchsel;
+		cancel_delayed_work(&wq->work_q);
+	} else {
 #endif
+#ifndef CONFIG_SAMSUNG_ARCHER_TARGET_SK //me add
+         if (sec_switch_started)
+         {
+           secsw->switch_sel = switchsel;
+           cancel_delayed_work(&wq->work_q);
+         }else{
+#endif
+		if(!sec_switch_started) {
+			sec_switch_started = 1;
+			schedule_delayed_work(&wq->work_q, msecs_to_jiffies(3000));
+                        
+		} else {
+			schedule_delayed_work(&wq->work_q, msecs_to_jiffies(100));
+		}
+		return;
+#if 1 //defined(CONFIG_SAMSUNG_ARCHER_TARGET_SK) //me change 
+	}
+#endif
+#if 0 //me close
 	if(secsw->pdata && secsw->pdata->get_regulator) {
 		ret = secsw->pdata->get_regulator();
 		if(ret != 0) {
@@ -263,7 +357,7 @@ static void sec_switch_init_work(struct work_struct *work)
 			return ;
 		}
 	}
-
+#endif
 	// init shared variable.
 	if(secsw->pdata && secsw->pdata->set_switch_status)
 		secsw->pdata->set_switch_status(secsw->switch_sel);
@@ -294,6 +388,9 @@ static int sec_switch_probe(struct platform_device *pdev)
 	struct sec_switch_struct *secsw;
 	struct sec_switch_platform_data *pdata = pdev->dev.platform_data;
 	struct sec_switch_wq *wq;
+#ifdef _FMC_DM_
+	struct device *usb_lock;
+#endif
 
 	if (!pdata) {
 		pr_err("%s : pdata is NULL.\n", __func__);
@@ -338,13 +435,27 @@ static int sec_switch_probe(struct platform_device *pdev)
 	if (device_create_file(switch_dev, &dev_attr_disable_vbus) < 0)
 		pr_err("Failed to create device file(%s)!\n", dev_attr_disable_vbus.attr.name);
 
+#ifdef _FMC_DM_
+	usb_lock = device_create(sec_class, switch_dev, MKDEV(0, 0), NULL, ".usb_lock");
+	if (IS_ERR(usb_lock)) {
+		pr_err("Failed to create device(usb_lock)!\n");
+	} else {
+		dev_set_drvdata(usb_lock, secsw);
+
+		if (device_create_file(usb_lock, &dev_attr_enable) < 0) {
+			pr_err("Failed to create device file(%s)!\n", dev_attr_enable.attr.name);
+			device_destroy((struct class *)usb_lock, MKDEV(0, 0));
+		}
+	}
+#endif
+
 	// run work queue
 	wq = kmalloc(sizeof(struct sec_switch_wq), GFP_ATOMIC);
 	if (wq) {
 		wq->sdata = secsw;
 		sec_switch_started = 0;
 		INIT_DELAYED_WORK(&wq->work_q, sec_switch_init_work);
-		schedule_delayed_work(&wq->work_q, msecs_to_jiffies(3000));
+		schedule_delayed_work(&wq->work_q, msecs_to_jiffies(100));
 	}
 	else
 		return -ENOMEM;

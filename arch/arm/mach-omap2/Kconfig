@@ -329,11 +329,11 @@ choice
 config SAMSUNG_HW_EMU_BOARD
 	bool "Samsung HW EMUL-Board"
 	default n
-    
+
 config SAMSUNG_HW_REL_BOARD
 	bool "Samsung HW REAL-Board"
 	default y
-    
+	
 endchoice
 
 config SAMSUNG_EMU_HW_REV

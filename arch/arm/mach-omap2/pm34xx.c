@@ -531,7 +531,6 @@ static void omap3_enable_io_chain(void)
 			prm_set_mod_reg_bits(OMAP3430_ST_IO_CHAIN_MASK,
 					     WKUP_MOD, PM_WKEN);
 		}
-
 	}
 }
 
@@ -822,13 +821,12 @@ void omap_sram_idle(void)
 	/* Enable IO-PAD and IO-CHAIN wakeups */
 	per_next_state = pwrdm_read_next_pwrst(per_pwrdm);
 	core_next_state = pwrdm_read_next_pwrst(core_pwrdm);
-#if 0
 	if (per_next_state < PWRDM_POWER_ON ||
 			core_next_state < PWRDM_POWER_ON) {
 		prm_set_mod_reg_bits(OMAP3430_EN_IO_MASK, WKUP_MOD, PM_WKEN);
 		omap3_enable_io_chain();
 	}
-#endif
+
 	/* PER */
 	if (per_next_state < PWRDM_POWER_ON) {
 	//if (core_next_state == PWRDM_POWER_OFF) omap3_noncore_dpll_disable(dpll5_ck);
@@ -889,7 +887,6 @@ void omap_sram_idle(void)
 		/* Enable IO-PAD and IO-CHAIN wakeups */
 		prm_set_mod_reg_bits(OMAP3430_EN_IO_MASK, WKUP_MOD, PM_WKEN);
 		omap3_enable_io_chain();
-		
 	} else {
 		omap_uart_prepare_idle(0);
 		omap_uart_prepare_idle(1); 
@@ -980,8 +977,6 @@ void omap_sram_idle(void)
 
 	/* PER */
 	if (per_next_state < PWRDM_POWER_ON) {
-		/* Don't attach mcbsp interrupt */
-		prm_clear_mod_reg_bits(OMAP3430_EN_MCBSP2_MASK,OMAP3430_PER_MOD, OMAP3430_PM_MPUGRPSEL);
 		if (per_next_state == PWRDM_POWER_OFF) {
 			per_prev_state = pwrdm_read_prev_pwrst(per_pwrdm);
 			if (per_prev_state == PWRDM_POWER_OFF){
@@ -1514,14 +1509,13 @@ static void __init prcm_setup_regs(void)
 			  OMAP3430_EN_GPIO4_MASK | OMAP3430_EN_GPIO5_MASK |
 			  OMAP3430_EN_GPIO6_MASK | OMAP3430_EN_UART3_MASK |
 			  OMAP3430_EN_MCBSP2_MASK, OMAP3430_PER_MOD, PM_WKEN);
-
-/* and allow them to wake up MPU */
+	/* and allow them to wake up MPU */
 	
 	prm_write_mod_reg(OMAP3430_GRPSEL_GPIO2_MASK |
 			  OMAP3430_GRPSEL_GPIO3_MASK |
 			  OMAP3430_GRPSEL_GPIO4_MASK |
 			  OMAP3430_GRPSEL_GPIO5_MASK |
-			  OMAP3430_GRPSEL_GPIO6_MASK | 
+			  OMAP3430_GRPSEL_GPIO6_MASK |
 			  OMAP3430_GRPSEL_UART3_MASK ,
 			  OMAP3430_PER_MOD, OMAP3430_PM_MPUGRPSEL);
 

@@ -66,7 +66,7 @@ unsigned int wakeup_gpio[] = {
 	OMAP_GPIO_TF_DETECT,
 };
 
-#if 0 //#ifdef CONFIG_MACH_SAMSUNG_ARCHER
+#ifdef CONFIG_MACH_SAMSUNG_ARCHER
 static struct omap_board_mux board_mux[] __initdata = {
 /*
  *		Name, reg-offset,

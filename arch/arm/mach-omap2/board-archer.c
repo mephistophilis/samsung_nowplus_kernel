@@ -161,6 +161,14 @@ EXPORT_SYMBOL(sec_setprio_get_value);
 #endif
 u32 hw_revision;
 EXPORT_SYMBOL(hw_revision);
+#ifdef CONFIG_VIDEO_LV8093
+#include <media/lv8093.h>
+//extern struct imx046_platform_data zoom2_lv8093_platform_data;
+#define LV8093_PS_GPIO			7
+/* GPIO7 is connected to lens PS pin through inverter */
+#define LV8093_PWR_OFF			1
+#define LV8093_PWR_ON			(!LV8093_PWR_OFF)
+#endif
 
 #ifndef CONFIG_TWL4030_CORE
 #error "no power companion board defined!"

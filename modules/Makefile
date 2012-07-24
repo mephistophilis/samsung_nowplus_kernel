@@ -12,9 +12,9 @@ MODULES_PL_SENSOR=y
 MODULES_FMRADIO=y
 MODULES_VIBETONZ=y
 MODULES_KXSD9=y
-MODULES_PARAM=y
+#MODULES_PARAM=y
 MODULES_BATTERY=y
-MODULES_OVERCLOCK=y
+#MODULES_OVERCLOCK=y
 
 .PHONY: clean install
 
@@ -40,7 +40,7 @@ ifeq ($(MODULES_PL_SENSOR),y)
 subdir-y += PL_sensor
 endif
 ifeq ($(MODULES_PARAM),y)
-#subdir-y += param
+subdir-y += param
 endif
 ifeq ($(MODULES_BATTERY),y)
 subdir-y += battery

@@ -97,7 +97,6 @@ static u16 _omap3_dpll_compute_freqsel(struct clk *clk, u8 n)
 	u16 f = 0;
 
 	fint = clk->dpll_data->clk_ref->rate / (n + 1);
-	//fint = clk->dpll_data->clk_ref->rate / n;
 
 	pr_debug("clock: fint is %lu\n", fint);
 
@@ -175,7 +174,7 @@ static int _omap3_noncore_dpll_bypass(struct clk *clk)
 {
 	int r;
 	u8 ai;
-     
+
 	if (!(clk->dpll_data->modes & (1 << DPLL_LOW_POWER_BYPASS)))
 		return -EINVAL;
 
@@ -360,11 +359,8 @@ void omap3_dpll_init(struct clk *clk)
 	dd = clk->dpll_data;
 
 	if (!dd)
-    {
-        printk("omap3_dpll_init: no dpll_data! %s, rate=%d, bypass: %s, rate=%d\n", clk->name, clk->rate);
 		return;
-    }
-    
+
 	clk_enable(clk);
 
 	omap3_dpll_allow_idle(clk);
@@ -415,16 +411,10 @@ int omap3_noncore_dpll_enable(struct clk *clk)
 {
 	int r;
 	struct dpll_data *dd;
-    
+
 	dd = clk->dpll_data;
 	if (!dd)
 		return -EINVAL;
-        
-    if(!clk->rate)
-        printk("omap3_noncore_dpll_enable: error: %s, rate is zero!\n", clk->name);
-        
-printk("omap3_noncore_dpll_enable: %s, rate=%d, bypass: %s, rate=%d\n", 
-    clk->name, clk->rate, dd->clk_bypass->name, dd->clk_bypass->rate);
 
 	if (clk->rate == dd->clk_bypass->rate) {
 		WARN_ON(clk->parent != dd->clk_bypass);
@@ -438,8 +428,7 @@ printk("omap3_noncore_dpll_enable: %s, rate=%d, bypass: %s, rate=%d\n",
 	 * propagating?
 	 */
 	if (!r)
-		//clk->rate = omap2_get_dpll_rate(clk);//me change
-        clk->rate = clk->recalc(clk);
+		clk->rate = omap2_get_dpll_rate(clk);
 
 	return r;
 }
