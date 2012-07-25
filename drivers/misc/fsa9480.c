@@ -31,7 +31,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
-
+#include <linux/switch.h> //me add
 #include <linux/gpio.h>
 #include <mach/gpio.h>
 
@@ -134,6 +134,9 @@ extern void (*ftm_enable_usb_sw)(int mode);
 static void _ftm_enable_usb_sw(int mode);
 #endif
 
+struct switch_dev switch_usb_connected = {
+        .name = "usb_connected",
+};
 
 static ssize_t fsa9480_show_control(struct device *dev,
 				   struct device_attribute *attr,
@@ -327,8 +330,9 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 	if (val1 || val2) {
 		/* USB */
 		if (val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) {
-			if (pdata->usb_cb)
-				pdata->usb_cb(FSA9480_ATTACHED);
+			if (pdata->usb_cb) {
+                                switch_set_state(&switch_usb_connected, 1);
+				pdata->usb_cb(FSA9480_ATTACHED); }
 			if (usbsw->mansw) {
 				ret = i2c_smbus_write_byte_data(client,
 					FSA9480_REG_MANSW1, usbsw->mansw);
@@ -370,8 +374,9 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 		/* USB */
 		if (usbsw->dev1 & DEV_T1_USB_MASK ||
 				usbsw->dev2 & DEV_T2_USB_MASK) {
-			if (pdata->usb_cb)
-				pdata->usb_cb(FSA9480_DETACHED);
+			if (pdata->usb_cb) {
+				switch_set_state(&switch_usb_connected, 0);
+                                pdata->usb_cb(FSA9480_DETACHED); }
 		/* UART */
 		} else if (usbsw->dev1 & DEV_T1_UART_MASK ||
 				usbsw->dev2 & DEV_T2_UART_MASK) {
@@ -656,6 +661,7 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct fsa9480_usbsw *usbsw;
 	int ret = 0;
+        int err=0;//me add
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
 		return -EIO;
@@ -671,6 +677,12 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 	if (!usbsw->pdata)
 		goto fail1;
 
+        err = switch_dev_register(&switch_usb_connected);//me add
+	if (err < 0) {
+		printk(KERN_ERR "usb_connected: Failed to register switch sendend device\n");
+		goto fail1;
+        }
+
 	i2c_set_clientdata(client, usbsw);
 
 	if (usbsw->pdata->cfg_gpio)
@@ -680,7 +692,7 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 
 	local_usbsw = usbsw;
 
-#if 0 // enable irq after sec switch is initialized
+#if 0 // enable irq after sec switch is initialized//me open
 	ret = fsa9480_irq_init(usbsw);
 	if (ret)
 		goto fail1;
@@ -722,7 +734,10 @@ static int __devexit fsa9480_remove(struct i2c_client *client)
 		disable_irq_wake(client->irq);
 		free_irq(client->irq, usbsw);
 	}
-	i2c_set_clientdata(client, NULL);
+	
+        switch_dev_unregister(&switch_usb_connected);//me add
+
+        i2c_set_clientdata(client, NULL);
 
 	sysfs_remove_group(&client->dev.kobj, &fsa9480_group);
 	kfree(usbsw);

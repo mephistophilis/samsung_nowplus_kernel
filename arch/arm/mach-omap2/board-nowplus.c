@@ -453,12 +453,12 @@ static struct charger_device_config samsung_charger_config_data = {
 	.VF_CHECK_USING_ADC	=	false,	//	n.c.	no	adc	connected	to	battery	on	nowplus
 
 	/*	2.	ADCPORT	(ADCPORT	NUM)	*/
-	.VF_ADC_PORT	=	0,
+	.VF_ADC_PORT	=	4,
 
 
 	//	[	SUPPORT	CHG_ING	IRQ	FOR	CHECKING	FULL	]
 	/*	1.	ENABLE	(true,	flase)	*/
-	.SUPPORT_CHG_ING_IRQ	=	true,	//use	/CHRG	as	IRQ
+	.SUPPORT_CHG_ING_IRQ	=	false,	//use	/CHRG	as	IRQ
 
 #ifdef	CONFIG_USB_SWITCH_FSA9480
 	.register_callbacks	=	&sec_battery_register_callbacks,
@@ -468,9 +468,9 @@ static struct charger_device_config samsung_charger_config_data = {
 static	int	samsung_battery_config_data[]	=	{
 	//	[	SUPPORT	MONITORING	CHARGE	CURRENT	FOR	CHECKING	FULL	]
 	/*	1.	ENABLE	(true,	flase)	*/
-	false,	//nowplus	doesnt	supprot	charging	current	measurement
+	true,	//nowplus	doesnt	supprot	charging	current	measurement
 	/*	2.	ADCPORT	(ADCPORT	NUM)	*/
-	0,
+	4,
 
 
 	//	[	SUPPORT	MONITORING	TEMPERATURE	OF	THE	SYSTEM	FOR	BLOCKING	CHARGE	]
@@ -821,12 +821,19 @@ static	inline	void	__init	nowplus_init_power_key(void)
 
 static	inline	void	__init	nowplus_init_battery(void)
 {
+#ifdef	CONFIG_BATTERY_MAX17040
 	if	(gpio_request(OMAP_GPIO_USBSW_NINT,	"OMAP_GPIO_USBSW_NINT")	<	0)	{
 		printk(KERN_ERR	"	request	OMAP_GPIO_USBSW_NINT	failed\n");
 		return;
 	}
 	gpio_direction_input(OMAP_GPIO_USBSW_NINT);
 
+	if(gpio_request(OMAP_GPIO_VF,	"OMAP_GPIO_VF")	<	0	){
+			printk(KERN_ERR	"\n	FAILED	TO	REQUEST	GPIO	%d	\n",OMAP_GPIO_VF);
+			return;
+		}
+	gpio_direction_input(OMAP_GPIO_VF);
+    
 	if(gpio_request(OMAP_GPIO_CHG_ING_N,	"OMAP_GPIO_CHG_ING_N")	<	0	){
 			printk(KERN_ERR	"\n	FAILED	TO	REQUEST	GPIO	%d	\n",OMAP_GPIO_CHG_ING_N);
 			return;
@@ -847,7 +854,7 @@ static	inline	void	__init	nowplus_init_battery(void)
 	{
 		gpio_direction_output(OMAP_GPIO_CHG_EN,	0);
 	}
-    
+#else
 	//	Line	903:		KUSB_CONN_IRQ	=	platform_get_irq(	pdev,	0	);
 	//	Line	923:		KTA_NCONN_IRQ	=	platform_get_irq(	pdev,	1	);
 	//	Line	938:		KCHG_ING_IRQ	=	platform_get_irq(	pdev,	2	);
@@ -855,27 +862,20 @@ static	inline	void	__init	nowplus_init_battery(void)
 
 	//	samsung_charger_resources[0].start	=	IH_USBIC_BASE;			//	is	usb	cable	connected	?
 	//	samsung_charger_resources[1].start	=	IH_USBIC_BASE	+	1;		//	is	charger	connected	?
-
     
-#if 0
-	if (gpio_request(OMAP_GPIO_USBSW_NINT, "usb switch irq") < 0) {
-		printk(KERN_ERR "Failed to request GPIO%d for usb switch IRQ\n",
-		       OMAP_GPIO_USBSW_NINT);
-		samsung_charger_resources[0].start = -1;
-	}
-	else {
-		samsung_charger_resources[0].start = gpio_to_irq(OMAP_GPIO_USBSW_NINT);
-		//omap_set_gpio_debounce( OMAP_GPIO_TA_NCONNECTED, 3 );
-		gpio_set_debounce( OMAP_GPIO_USBSW_NINT, 3 );
-	}
+#if defined(CONFIG_USB_SWITCH_FSA9480)
+	samsung_charger_resources[0].start = gpio_to_irq(OMAP_GPIO_USBSW_NINT);
+	samsung_charger_resources[1].start = gpio_to_irq(OMAP_GPIO_VF); // NC
+#elif defined(CONFIG_MICROUSBIC_INTR)
+	samsung_charger_resources[0].start = IH_USBIC_BASE;    
+	samsung_charger_resources[1].start = IH_USBIC_BASE + 1;
+#endif
+	
 
-	samsung_charger_resources[1].start	=	-1;	//	NC,	set	dummy	value	//	is	charger	connected	?
-
-    
-    if (gpio_request(OMAP_GPIO_CHG_ING_N, "charge full irq") < 0) {
-        printk(KERN_ERR "Failed to request GPIO%d for charge full IRQ\n",
-               OMAP_GPIO_CHG_ING_N);
-        samsung_charger_resources[2].start = -1;
+	if (gpio_request(OMAP_GPIO_CHG_ING_N, "charge full irq") < 0) {
+		printk(KERN_ERR "Failed to request GPIO%d for charge full IRQ\n",
+		       OMAP_GPIO_CHG_ING_N);
+		samsung_charger_resources[2].start = -1;
 	}
 	else {
 		samsung_charger_resources[2].start = gpio_to_irq(OMAP_GPIO_CHG_ING_N);
@@ -891,6 +891,7 @@ static	inline	void	__init	nowplus_init_battery(void)
 	else {
 		samsung_charger_resources[3].start = gpio_to_irq(OMAP_GPIO_CHG_EN);
 	}
+
 #endif
 }
 
@@ -1459,11 +1460,9 @@ static	struct	i2c_board_info	__initdata	nowplus_i2c2_boardinfo[]	=	{
 		.platform_data	=	&nowplus_max17040_data,
 #else   //	use	Samsung	driver
 		I2C_BOARD_INFO("secFuelgaugeDev",	0x36),
-#if	1	//(CONFIG_ARCHER_REV	>=	ARCHER_REV11)
-		//.flags	=	I2C_CLIENT_WAKE,
-		//.irq	=	OMAP_GPIO_IRQ(OMAP_GPIO_FUEL_INT_N),
+		.flags	=	I2C_CLIENT_WAKE,
 #endif
-#endif
+
 	},
 	{
 		I2C_BOARD_INFO("PL_driver",	0x44),
@@ -1962,12 +1961,6 @@ static	inline	void	__init	nowplus_init_platform(void)
 			return;
 		}
 	gpio_direction_input(OMAP_GPIO_IF_CON_SENSE);
-
-	if(gpio_request(OMAP_GPIO_VF,	"OMAP_GPIO_VF")	<	0	){
-			printk(KERN_ERR	"\n	FAILED	TO	REQUEST	GPIO	%d	\n",OMAP_GPIO_VF);
-			return;
-		}
-	gpio_direction_input(OMAP_GPIO_VF);
 
 }
 

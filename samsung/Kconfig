@@ -29,9 +29,9 @@ menu "Immersion Touch Sense Driver (vibetonz)"
 source "samsung/vibetonz/Kconfig"
 endmenu
 
-menu "Samsung Battery Driver"
-source "samsung/battery/Kconfig"
-endmenu
+#menu "Samsung Battery Driver"
+#source "samsung/battery/Kconfig"
+#endmenu
 
 menu "Samsung Proximity/Light Sensor Driver"
 source "samsung/PL_sensor/Kconfig"
