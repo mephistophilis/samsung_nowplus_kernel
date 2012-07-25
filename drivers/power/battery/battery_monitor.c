@@ -783,6 +783,9 @@ static int get_system_temperature( bool flag )
 if(adc<10)
 {
 	printk("[BR] TEMP ADC: %d\n", adc);
+    temp = 29;
+}
+
     adc = _get_t2adc_data_(1);
     printk("[BR] TEMP ADC1: %d\n", adc);
     adc = _get_t2adc_data_( 2 );
@@ -797,8 +800,6 @@ if(adc<10)
     printk("[BR] TEMP ADC6: %d\n", adc);
     adc = _get_t2adc_data_( 7 );
     printk("[BR] TEMP ADC7: %d\n", adc);
-    temp = 29;
-}
 
 	return temp;
 }
