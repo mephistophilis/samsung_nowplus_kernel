@@ -290,7 +290,7 @@ static inline u8 uhhtll_omap_readb(void __iomem *base, u8 reg)
 /*-------------------------------------------------------------------------*/
 
 
-#if 0//def	CONFIG_PM
+#ifdef	CONFIG_PM
 
 /* get the throughput */
 static int uhhtll_get_tput(struct device	*dev)
