@@ -2336,7 +2336,7 @@ void __init nowplus_peripherals_init(void)
 #endif
 	enable_board_wakeup_source();
 
-	nowplus_ramconsole_init();
+	//nowplus_ramconsole_init();
 	nowplus_init_power_key();
 	nowplus_init_earphone();
 	nowplus_init_battery();
