@@ -168,7 +168,7 @@ static int __init _omap_mux_init_signal(struct omap_mux_partition *partition,
 
 		/* First check for full name in mode0.muxmode format */
 		if (mode0_len && strncmp(muxname, m0_entry, mode0_len))
-			continue;       
+			continue;
 
 		/* Then check for muxmode only */
 		for (i = 0; i < OMAP_MUX_NR_MODES; i++) {
@@ -188,7 +188,7 @@ static int __init _omap_mux_init_signal(struct omap_mux_partition *partition,
 					 "%s.%s 0x%04x -> 0x%04x\n",
 					 __func__, m0_entry, muxname,
 					old_mode, mux_mode);
-				omap_mux_write(partition, mux_mode,
+			omap_mux_write(partition, mux_mode,
 					       m->reg_offset);
 				found++;
 			}
@@ -204,7 +204,7 @@ static int __init _omap_mux_init_signal(struct omap_mux_partition *partition,
 		return -EINVAL;
 	}
 
-    pr_err("%s: Could not set signal %s, not found\n", __func__, muxname);
+	pr_err("%s: Could not set signal %s\n", __func__, muxname);
 
 	return -ENODEV;
 }
@@ -305,15 +305,13 @@ static inline void omap_mux_decode(struct seq_file *s, u16 val)
 
 	OMAP_MUX_TEST_FLAG(val, OMAP_PIN_OFF_WAKEUPENABLE);
 	if (val & OMAP_OFF_EN) {
-		if (val & OMAP_OFFOUT_EN) {
-			if (val & OMAP_OFF_PULL_EN) {
-				if (!(val & OMAP_OFF_PULL_UP)) {
-					OMAP_MUX_TEST_FLAG(val,
-						OMAP_PIN_OFF_INPUT_PULLDOWN);
-				} else {
-					OMAP_MUX_TEST_FLAG(val,
-						OMAP_PIN_OFF_INPUT_PULLUP);
-				}
+		if (!(val & OMAP_OFFOUT_EN)) {
+			if (!(val & OMAP_OFF_PULL_UP)) {
+				OMAP_MUX_TEST_FLAG(val,
+					OMAP_PIN_OFF_INPUT_PULLDOWN);
+			} else {
+				OMAP_MUX_TEST_FLAG(val,
+					OMAP_PIN_OFF_INPUT_PULLUP);
 			}
 		} else {
 			if (!(val & OMAP_OFFOUT_VAL)) {
@@ -852,6 +850,7 @@ static void omap_mux_init_signals(struct omap_mux_partition *partition,
 				  struct omap_board_mux *board_mux)
 {
 	omap_mux_set_cmdline_signals();
+	//omap_mux_write_array(partition->base, board_mux); //Bug 
     omap_mux_write_array(partition, board_mux);
 }
 
@@ -904,10 +903,7 @@ int __init omap_mux_init(const char * name, u32 flags,
 		mux_partitions_cnt, partition->name, partition->flags);
 
 	omap_mux_init_package(superset, package_subset, package_balls);
-#if 1
-/* had to disable usb_ehci, conflicts with gpio_24 & gpio_27
-   USB host interface use same pins like power button and ear key switch
-*/
+#if 0 // Archer integration - Corrupts mux pad making power key, and head set detection fail//me open
 	omap_mux_init_list(partition, superset);
 #endif
 	omap_mux_init_signals(partition, board_mux);

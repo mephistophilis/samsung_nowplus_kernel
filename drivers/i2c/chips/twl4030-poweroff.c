@@ -124,7 +124,7 @@ static void nowplus_poweroff(void)
 		printk("Power Off !\n\n");
 		while(1)
 		{
-			set_ps_hold(0);
+			gpio_direction_output(OMAP_GPIO_PS_HOLD_PU, 0);
 
 			if (0 /*is_powerbutton_pressed*/)
 				printk("Power button is pressed\n\n");
@@ -141,6 +141,15 @@ static void nowplus_poweroff(void)
 static int __init twl4030_poweroff_init(void)
 {
 	pm_power_off = nowplus_poweroff;
+
+	/*PS HOLD*/
+	if(gpio_request(OMAP_GPIO_PS_HOLD_PU,	"OMAP_GPIO_PS_HOLD_PU")	<	0	){
+			printk(KERN_ERR	"\n	FAILED	TO	REQUEST	GPIO	%d	\n",OMAP_GPIO_PS_HOLD_PU);
+	}
+
+	gpio_direction_output(OMAP_GPIO_PS_HOLD_PU, 1);
+
+
 
 	return 0;
 }

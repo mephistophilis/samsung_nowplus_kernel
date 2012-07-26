@@ -23,6 +23,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
+#define DEBUG 1
 #include <linux/module.h>
 #include <linux/init.h>
 #include <asm/system.h>
@@ -140,7 +141,7 @@ int omap34xx_pad_set_wakeup_src(int gpio, int wakeup_en)
 }
 EXPORT_SYMBOL(omap3430_pad_set_padoff);
 #endif
-#if 0
+
 int omap34xx_pad_set_config(struct pin_config *pin_config)
 {
 	unsigned long flags;
@@ -148,10 +149,12 @@ int omap34xx_pad_set_config(struct pin_config *pin_config)
 	u16  pad_val;
 
 	spin_lock_irqsave(&pad_spin_lock, flags);
-	
-    pad_pin = pin_config->mux_reg;
-	pad_val = pin_config->mux_val;
 
+//ARCHER_MIGRATION
+#if 0	
+        pad_pin = pin_config->mux_reg;
+	pad_val = pin_config->mux_val;
+#endif
 
 	omap_ctrl_writew(pad_val, pad_pin);
 	omap_ctrl_readw(pad_pin);
@@ -161,7 +164,7 @@ int omap34xx_pad_set_config(struct pin_config *pin_config)
 	return 0;
 }
 EXPORT_SYMBOL(omap34xx_pad_set_config);
-#endif
+
 
 int omap34xx_pad_set_config_lcd(u16 pad_pin,u16 pad_val)
 {
@@ -175,18 +178,35 @@ int omap34xx_pad_set_config_lcd(u16 pad_pin,u16 pad_val)
 }
 
 EXPORT_SYMBOL(omap34xx_pad_set_config_lcd);
-#if 0
 int omap34xx_pad_set_configs(struct pin_config *pin_configs, int n)
 {
+	unsigned long flags;
+	u16 pad_pin;
+	u16  pad_val;
 	int i=0;
 
+	if (n <= 0)
+		return 0;
+
+	spin_lock_irqsave(&pad_spin_lock, flags);
+
 	for (i = 0; i < n; i++) 
-        omap34xx_pad_set_config(pin_configs++);
+	{
+		pad_pin = pin_configs->mux_reg;
+	//ARCHER_MIGRATION
+	#if 0
+         	pad_val = pin_configs->mux_val;
+	#endif	
+		omap_ctrl_writew(pad_val, pad_pin);
+
+		pin_configs++;
+	}
+	spin_unlock_irqrestore(&pad_spin_lock, flags);
 
 	return 0;
 }
 EXPORT_SYMBOL(omap34xx_pad_set_configs);
-#endif
+
 
 int omap34xx_pad_set_padoff(int gpio, int wakeup_en)
 {

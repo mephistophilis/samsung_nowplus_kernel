@@ -43,7 +43,6 @@
 
 #define MAX_DPLL_WAIT_TRIES		1000000
 
-#define DEBUG
 /* Private functions */
 
 /* _omap3_dpll_write_clken - write clken_bits arg to a DPLL's enable bits */
@@ -428,7 +427,8 @@ int omap3_noncore_dpll_enable(struct clk *clk)
 	 * propagating?
 	 */
 	if (!r)
-		clk->rate = omap2_get_dpll_rate(clk);
+		//clk->rate = omap2_get_dpll_rate(clk);//me change
+                clk->rate = clk->recalc(clk);
 
 	return r;
 }

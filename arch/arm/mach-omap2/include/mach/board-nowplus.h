@@ -61,8 +61,8 @@ extern void twl4030_bci_battery_init(void);
 #define LDP3430_NAND_CS		0 
 
 /* LAN chip details */
-#define LDP_SMC911X_CS		7
-#define LDP_SMC911X_GPIO	158
+//#define LDP_SMC911X_CS		7
+//#define LDP_SMC911X_GPIO	158
 #define DEBUG_BASE		0x08000000
 #define OMAP34XX_ETHR_START	DEBUG_BASE
 #define	OMAP34XX_MUX_MODE7	7

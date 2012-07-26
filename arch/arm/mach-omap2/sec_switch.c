@@ -415,13 +415,13 @@ static int sec_switch_probe(struct platform_device *pdev)
 		printk(KERN_ERR "Filed to request OMAP_GPIO_UART_SEL!\n");
 	}
 	gpio_direction_output(GPIO_UART_SEL, 0);
-
+#if 0 //me close
 	if (gpio_request(GPIO_USB_SEL, "USB_SEL"))
 	{
 		printk(KERN_ERR "Filed to request OMAP_GPIO_USB_SEL!\n");
 	}
 	gpio_direction_output(GPIO_USB_SEL, 0);
-
+#endif
 	// create sysfs files.
 	if (device_create_file(switch_dev, &dev_attr_uart_sel) < 0)
 		pr_err("Failed to create device file(%s)!\n", dev_attr_uart_sel.attr.name);

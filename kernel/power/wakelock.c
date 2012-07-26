@@ -32,7 +32,7 @@
 
 #ifndef DISABLE_WAKELOCK_INDICATOR
 #include <linux/delay.h>
-#include <mach/archer.h>
+#include <mach/nowplus.h>
 
 #ifndef DISABLE_WAKELOCK_INDICATOR_BLINKING
 struct timer_list wakelock_indicator;
