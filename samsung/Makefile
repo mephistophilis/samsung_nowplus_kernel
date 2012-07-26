@@ -25,7 +25,7 @@
 
 #obj-$(CONFIG_TINY_FSR)			+= rfs_fsr/drivers/tfsr/
 #obj-$(CONFIG_SAMSUNG_BATTERY)		+= battery/
-#obj-$(CONFIG_SAMSUNG_VIBETONZ)		+= vibetonz/
+obj-$(CONFIG_SAMSUNG_VIBETONZ)		+= vibetonz/
 #obj-$(CONFIG_SAMSUNG_DPRAM_FLASHLESS)	+= dpram_flashless/
 #obj-$(CONFIG_INPUT_AK8973B)		+= ak8973b/
 #obj-$(CONFIG_SAMSUNG_PROXIMITY_LIGHT)	+= PL_sensor/
