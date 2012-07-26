@@ -17,27 +17,27 @@
 ////////////////////////////////////////////////////////////////
 // I2C1
 ////////////////////////////////////////////////////////////////
-#define I2C1_REV       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x00))
-#define I2C1_IE        *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x04))
-#define I2C1_STAT      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x08))
-#define I2C1_SYSS      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x10))
-#define I2C1_BUF       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x14))
-#define I2C1_CNT       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x18))
-#define I2C1_DATA      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x1C))
-#define I2C1_SYSC      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x20))
-#define I2C1_CON       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x24))
-#define I2C1_OA0       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x28))   // OMAP2430 only
-#define I2C1_SA        *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x2C))
-#define I2C1_PSC       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x30))
-#define I2C1_SCLL      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x34))
-#define I2C1_SCLH      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x38))
-#define I2C1_SYSTEST   *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x3C))
-#define I2C1_BUFSTAT   *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x40))  // OMAP2430 only
-#define I2C1_OA1       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x44)) // OMAP2430 only
-#define I2C1_OA2       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x48))  // OMAP2430 only
-#define I2C1_OA3       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x4C))  // OMAP2430 only
-#define I2C1_ACTOA     *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x50))  // OMAP2430 only
-#define I2C1_SBLOCK    *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0xd8070000 + 0x54))  // OMAP2430 only
+#define I2C1_REV       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x00))
+#define I2C1_IE        *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x04))
+#define I2C1_STAT      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x08))
+#define I2C1_SYSS      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x10))
+#define I2C1_BUF       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x14))
+#define I2C1_CNT       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x18))
+#define I2C1_DATA      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x1C))
+#define I2C1_SYSC      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x20))
+#define I2C1_CON       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x24))
+#define I2C1_OA0       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x28))   // OMAP2430 only
+#define I2C1_SA        *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x2C))
+#define I2C1_PSC       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x30))
+#define I2C1_SCLL      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x34))
+#define I2C1_SCLH      *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x38))
+#define I2C1_SYSTEST   *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x3C))
+#define I2C1_BUFSTAT   *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x40))  // OMAP2430 only
+#define I2C1_OA1       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x44)) // OMAP2430 only
+#define I2C1_OA2       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x48))  // OMAP2430 only
+#define I2C1_OA3       *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x4C))  // OMAP2430 only
+#define I2C1_ACTOA     *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x50))  // OMAP2430 only
+#define I2C1_SBLOCK    *(volatile unsigned short *)(OMAP2_L4_IO_ADDRESS(0x48070000 + 0x54))  // OMAP2430 only
 
 extern int clk_enable(struct clk *clk);
 extern void clk_disable(struct clk *clk);

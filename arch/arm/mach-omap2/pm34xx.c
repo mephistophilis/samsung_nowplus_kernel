@@ -991,7 +991,9 @@ void omap_sram_idle(void)
 #endif
 			} else {
 				omap2_gpio_resume_after_idle(true);
+#ifdef __FIX_GPIO_OUTPUT_GLITCH_IN_OFF_MODE__
 				omap3_gpio_restore_pad_context();
+#endif
 			}
 		}
 		omap_uart_resume_idle(2);

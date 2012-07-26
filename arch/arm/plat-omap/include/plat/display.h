@@ -407,9 +407,11 @@ int dsi_vc_send_null(enum omap_dsi_index ix, int channel);
 int dsi_vc_send_bta_sync(enum omap_dsi_index ix, int channel);
 
 /* Board specific data */
+# if 0
 #define PWM2ON			0x03
 #define PWM2OFF			0x04
 #define TOGGLE3			0x92
+
 #define HDMI_GPIO_60		60
 #define HDMI_GPIO_41		41
 #define DLP_4430_GPIO_40	40
@@ -419,7 +421,7 @@ int dsi_vc_send_bta_sync(enum omap_dsi_index ix, int channel);
 
 #define PROGRESSIVE		0
 #define INTERLACED		1
-
+#endif
 struct omap_dss_board_info {
 	int (*get_last_off_on_transaction_id)(struct device *dev);
 	int num_devices;
@@ -463,13 +465,6 @@ struct omap_dss_color_weight_coef {
 	int rr, rg, rb;
 	int gr, gg, gb;
 	int br, bg, bb;
-};
-
-struct omap_color_conv_coef {
-	int  ry,  rcr,  rcb;
-	int  gy,  gcr,  gcb;
-	int  by,  bcr,  bcb;
-	int  full_range;
 };
 
 struct omap_dss_yuv2rgb_conv {
@@ -900,9 +895,9 @@ int omap_dispc_unregister_isr(omap_dispc_isr_t isr, void *arg, u32 mask);
 int omap_dispc_wait_for_irq_timeout(u32 irqmask, unsigned long timeout);
 int omap_dispc_wait_for_irq_interruptible_timeout(u32 irqmask,
 			unsigned long timeout);
-void dispc_get_default_color_conv_coef(struct omap_color_conv_coef *ct);
-void dispc_set_color_conv_coef(enum omap_plane plane,
-		const struct omap_color_conv_coef *ct);
+//void dispc_get_default_color_conv_coef(struct omap_color_conv_coef *ct);
+//void dispc_set_color_conv_coef(enum omap_plane plane,
+//		const struct omap_color_conv_coef *ct);
 
 #define to_dss_driver(x) container_of((x), struct omap_dss_driver, driver)
 #define to_dss_device(x) container_of((x), struct omap_dss_device, dev)

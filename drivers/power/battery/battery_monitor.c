@@ -782,7 +782,7 @@ static int get_system_temperature( bool flag )
 
 if(adc<10)
 {
-	printk("[BR] TEMP ADC: %d device_config->TEMP_ADC_PORT %d\n", adc,device_config->TEMP_ADC_PORT);
+	printk("[BR] TEMP ADC: %d\n", adc);
     temp = 29;
 }
 

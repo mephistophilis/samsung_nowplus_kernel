@@ -1045,7 +1045,6 @@ static void __init omap4_init_voltagecontroller(void)
 	 * Configure SR I2C in HS Mode. Is there really a need to configure
 	 * i2c in the normal mode??
 	 */
-
 	voltage_write_reg(OMAP4_PRM_VC_CFG_I2C_CLK_OFFSET,
 		(0x0B << OMAP4430_HSSCLL_SHIFT |
 		0x00 << OMAP4430_HSSCLH_SHIFT |

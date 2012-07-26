@@ -21,7 +21,6 @@
 #include <plat/iommu.h>
 #include <plat/omap_device.h>
 
-#define DEBUG 1
 /*
  * omap2 architecture specific register bit definitions
  */
@@ -95,7 +94,7 @@ static int omap2_iommu_enable(struct iommu *obj)
 {
 	u32 l, pa;
 	unsigned long timeout;
-	int ret = 0;
+	
 
 	if (!obj->iopgd || !IS_ALIGNED((u32)obj->iopgd,  SZ_16K))
 		return -EINVAL;
@@ -104,12 +103,6 @@ static int omap2_iommu_enable(struct iommu *obj)
 	if (!IS_ALIGNED(pa, SZ_16K))
 		return -EINVAL;
 
-	ret = omap_device_enable(obj->pdev);
-	if (ret)
-    {
-        printk("%s: error omap_device_enable\n",__func__);
-		return ret;
-    }
 
 	iommu_write_reg(obj, MMU_SYS_SOFTRESET, MMU_SYSCONFIG);
 
@@ -155,8 +148,7 @@ static void omap2_iommu_disable(struct iommu *obj)
 	iommu_write_reg(obj, MMU_SYS_IDLE_FORCE, MMU_SYSCONFIG);
 
 	dev_dbg(obj->dev, "%s is shutting down\n", obj->name);
-	if (omap_device_shutdown(obj->pdev))
-		dev_err(obj->dev, "%s err 0x%x\n", __func__, ret);
+
 }
 
 static u32 omap2_iommu_fault_isr(struct iommu *obj, u32 *ra)

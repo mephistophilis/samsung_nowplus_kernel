@@ -168,7 +168,7 @@ static int __init _omap_mux_init_signal(struct omap_mux_partition *partition,
 
 		/* First check for full name in mode0.muxmode format */
 		if (mode0_len && strncmp(muxname, m0_entry, mode0_len))
-			continue;       
+			continue;
 
 		/* Then check for muxmode only */
 		for (i = 0; i < OMAP_MUX_NR_MODES; i++) {
@@ -188,7 +188,7 @@ static int __init _omap_mux_init_signal(struct omap_mux_partition *partition,
 					 "%s.%s 0x%04x -> 0x%04x\n",
 					 __func__, m0_entry, muxname,
 					old_mode, mux_mode);
-				omap_mux_write(partition, mux_mode,
+			omap_mux_write(partition, mux_mode,
 					       m->reg_offset);
 				found++;
 			}
@@ -204,7 +204,7 @@ static int __init _omap_mux_init_signal(struct omap_mux_partition *partition,
 		return -EINVAL;
 	}
 
-    pr_err("%s: Could not set signal %s, not found\n", __func__, muxname);
+	pr_err("%s: Could not set signal %s\n", __func__, muxname);
 
 	return -ENODEV;
 }

@@ -229,7 +229,6 @@ s32 t2_adc_data( u8 channel)
 
 	int i;
 	unsigned int data[5];
-
 //	t2_write(0x4B, 0, PHY_VUSB_DEDICATED2);
 //	t2_write(0x4B, 0x14, PHY_VUSB_DEDICATED1);
 
@@ -281,6 +280,7 @@ s32 t2_adc_data( u8 channel)
 	ret = get_average_adc_value(data, 5);
 
 
+
 #ifndef WR_ADC
 	//t2_write(0x4B, T2_VINTANA2_OFF, PHY_VINTANA2_DEDICATED);
 	t2_write(0x4B, 0x0, 0x9E/*VINTANA2_DEV_GRP*/);	
@@ -304,7 +304,39 @@ s32 t2_adc_data( u8 channel)
 
 
 
+#if 0 // log
+// PM_RECEIVER [
+    printk("## pm start ##\n");
+    for (i = 0x5B; i <= 0xF1; i ++)
+    {
+    	t2_read(0x4b, &val, i);
+        printk("%x: %x\n", i, val);
+    }
+    printk("## pm end ##\n");
+// PM_RECEIVER ]
 
+// USB [
+    printk("## usb start ##\n");
+    for (i = 0; i <= 0xFF; i ++)
+    {
+    	t2_read(0x48, &val, i);
+        printk("%x: %x\n", val);
+    }
+    printk("## usb end ##\n");
+// USB ]
+
+// MADC [
+#if 1
+    printk("## madc start ##\n");
+    for (i = 0x0; i <= 0x67; i ++)
+    {
+    	t2_read(0x4a, &val, i);
+        printk("%x: %x\n", i, val);
+    }
+    printk("## madc end ##\n");
+#endif
+// MADC ]
+#endif // log
 
 	return ret;
 }

@@ -248,6 +248,7 @@ static int twlreg_set_mode(struct regulator_dev *rdev, unsigned mode)
 #define UNSUP_MASK	0x0000
 #else
 #define UNSUP_MASK	0x8000
+#error 1
 #endif
 
 #define UNSUP(x)	(UNSUP_MASK | (x))

@@ -323,7 +323,7 @@ static int fuelgauge_probe( struct i2c_client *client,
 
 	}
 
-//	sec_bci->charger.fuelgauge_full_soc = 100;  // for adjust fuelgauge
+//	sec_bci->charger.fuelgauge_full_soc = 92;  // for adjust fuelgauge
 
 	return ret;
 }
