@@ -43,7 +43,7 @@
 #include <asm/uaccess.h>
 #include "tspdrv.h"
 #include "ImmVibeSPI.c"
-
+#include <linux/wakelock.h>
 /* Device name and version information */
 #define VERSION_STR " v3.3.13.0\n"                  /* DO NOT CHANGE - this is auto-generated */
 #define VERSION_STR_LEN 16                          /* account extra space for future extra digits in version number */
@@ -82,6 +82,109 @@ static int g_nMajor = 0;
 
 /* Needs to be included after the global variables because it uses them */
 #include "VibeOSKernelLinuxTime.c"
+
+static struct wake_lock vib_wake_lock;
+
+static struct hrtimer timer;
+
+static int max_timeout = 5000;
+static int vibrator_value = 0;
+
+int g_vibtonzEnable=0;
+
+static int set_vibetonz(int timeout)
+{
+        if (g_vibtonzEnable==0)
+        {
+            vibtonzGPtimer_enable();
+        	g_vibtonzEnable=1;
+        }
+
+        if(!timeout) {
+				ImmVibeSPI_ForceOut_Set(0, 0);
+				ImmVibeSPI_ForceOut_AmpDisable(0);
+                printk("[VIBETONZ] DISABLE\n");
+				wake_unlock(&vib_wake_lock);
+        }
+        else {
+				wake_lock(&vib_wake_lock);
+                printk("[VIBETONZ] ENABLE\n");
+				ImmVibeSPI_ForceOut_AmpEnable(0);
+                ImmVibeSPI_ForceOut_Set(0, 127);
+        }
+
+        vibrator_value = timeout;
+        
+        return 0;
+}
+
+static enum hrtimer_restart vibetonz_timer_func(struct hrtimer *timer)
+{
+        set_vibetonz(0);
+        return HRTIMER_NORESTART;
+}
+
+static int get_time_for_vibetonz(struct timed_output_dev *dev)
+{
+        int remaining;
+
+        if (hrtimer_active(&timer)) {
+                ktime_t r = hrtimer_get_remaining(&timer);
+                remaining = r.tv.sec * 1000 + r.tv.nsec / 1000000;
+        } else
+                remaining = 0;
+
+        if (vibrator_value ==-1)
+                remaining = -1;
+
+        return remaining;
+
+}
+
+static void enable_vibetonz_from_user(struct timed_output_dev *dev,int value)
+{
+        printk("[VIBETONZ] %s : time = %d msec \n",__func__,value);
+        hrtimer_cancel(&timer);
+        
+        set_vibetonz(value);
+        vibrator_value = value;
+
+        if (value > 0) 
+        {
+                if (value > max_timeout)
+                        value = max_timeout;
+
+                hrtimer_start(&timer,
+                                                ktime_set(value / 1000, (value % 1000) * 1000000),
+                                                HRTIMER_MODE_REL);
+                vibrator_value = 0;
+        }
+}
+
+static struct timed_output_dev timed_output_vt = {
+        .name     = "vibrator",
+        .get_time = get_time_for_vibetonz,
+        .enable   = enable_vibetonz_from_user,
+};
+
+static void vibetonz_start(void)
+{
+        int ret = 0;
+
+        hrtimer_init(&timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+        timer.function = vibetonz_timer_func;
+
+	if (gpio_is_valid(OMAP_GPIO_MOTOR_EN)){
+		if (gpio_request(OMAP_GPIO_MOTOR_EN, NULL))
+			printk(KERN_ERR "Failed to request GPIO_VIB_EN!\n");
+		mdelay(10);
+		gpio_set_value(OMAP_GPIO_MOTOR_EN, GPIO_LEVEL_LOW);
+	}
+
+        ret = timed_output_dev_register(&timed_output_vt);
+        if(ret)
+                printk(KERN_ERR "[VIBETONZ] timed_output_dev_register is fail \n");     
+}
 
 /* File IO */
 static int open(struct inode *inode, struct file *file);
@@ -138,7 +241,6 @@ MODULE_DESCRIPTION("TouchSense Kernel Module");
 MODULE_LICENSE("GPL v2");
 
 
-int g_vibtonzEnable=0;
 
 int init_module(void)
 {
@@ -193,7 +295,8 @@ int init_module(void)
         g_SamplesBuffer[i].actuatorSamples[1].nBufferSize = 0;
     }
 
-
+ 	wake_lock_init(&vib_wake_lock, WAKE_LOCK_SUSPEND, "vib_present");
+	vibetonz_start();
 
     return 0;
 }
@@ -430,11 +533,13 @@ static int ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsig
 //		vibtonzGPtimer_enable();
 //	g_vibtonzEnable=1;
 //	}
+			wake_lock(&vib_wake_lock);
             ImmVibeSPI_ForceOut_AmpEnable(arg);
             break;
 
         case TSPDRV_DISABLE_AMP:
             ImmVibeSPI_ForceOut_AmpDisable(arg);
+			wake_unlock(&vib_wake_lock);
             break;
 
         case TSPDRV_GET_NUM_ACTUATORS:
