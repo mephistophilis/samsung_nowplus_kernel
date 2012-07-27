@@ -854,19 +854,24 @@ int KXSD9_dev_set_operation_mode( int module, int param )
     switch( status )
     {
         case STANDBY:
-            printk("%s: STANDBY\n", __FUNCTION__ );
-            // KXSD9_dev_disable() ;  // JUN : 수평보정 후 dev is DISABLED by dev_state [0] 발생 하여 막음 
+            KXSD9_dev_disable() ;
+            KXSD9_timer.saved_timer_state= TIMER_OFF ;
+            KXSD9_timer_disable() ;
             break ;
             
         case ONLYACCEL:
         case ONLYCOMPASS:
         case ACCELCOMPASS:
             KXSD9_dev_enable() ;
+            KXSD9_timer.saved_timer_state= TIMER_ON ;
+            KXSD9_timer_enable( KXSD9_timer.polling_time ) ;
             break ;
             
         default:
             KXSD9_dev_disable() ;
-            printk("%s: Fault argument!!! Disable of all in force\n", __FUNCTION__ );
+            KXSD9_timer.saved_timer_state= TIMER_OFF ;
+            KXSD9_timer_disable() ;
+            printk("%s: KXSD9_dev_set_operation_mode Fault argument!!! Disable of all in force\n", __FUNCTION__ );
             break ;
     }
 

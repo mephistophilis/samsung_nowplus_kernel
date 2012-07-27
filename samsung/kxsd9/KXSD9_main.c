@@ -135,7 +135,7 @@ kxsd9_convert_t    kxsd9_convert =
     //.name= "bma023",
     .zero_g_offset= 2048, 
     .divide_unit=   819,
-#if CONFIG_OSCAR_REV >= CONFIG_OSCAR_REV00
+#ifdef CONFIG_MACH_SAMSUNG_NOWPLUS
     .axis= { -1, -1, 1 },
     .x_y_axis_changed= 0,
 #else
@@ -375,7 +375,7 @@ static ssize_t KXSD9_read (struct file *filp, char *buf, size_t count, loff_t *o
     do_gettimeofday(&(data[0].time));
     data[0].type = EV_ABS;
     data[0].code = ABS_X;
-#if defined(CONFIG_MACH_OSCAR) && (CONFIG_OSCAR_REV >= CONFIG_OSCAR_REV00)
+#if defined(CONFIG_MACH_SAMSUNG_NOWPLUS)
     data[0].value = (__s32)g_acc_val.X_acc - 2048;
 #else
     data[0].value = (__s32)g_acc_val.Y_acc - 2048;
@@ -385,7 +385,7 @@ static ssize_t KXSD9_read (struct file *filp, char *buf, size_t count, loff_t *o
     data[1].type = EV_ABS;
     data[1].code = ABS_Y;
 
-#if defined(CONFIG_MACH_OSCAR) && (CONFIG_OSCAR_REV >= CONFIG_OSCAR_REV00)
+#if defined(CONFIG_MACH_SAMSUNG_NOWPLUS)
     data[1].value = (__s32)g_acc_val.Y_acc - 2048;
 #else
     data[1].value = (__s32)g_acc_val.X_acc - 2048;
@@ -394,7 +394,7 @@ static ssize_t KXSD9_read (struct file *filp, char *buf, size_t count, loff_t *o
     data[2].time = data[0].time;
     data[2].type = EV_ABS;
     data[2].code = ABS_Z;
-#if defined(CONFIG_MACH_OSCAR) && (CONFIG_OSCAR_REV >= CONFIG_OSCAR_REV00)
+#if defined(CONFIG_MACH_SAMSUNG_NOWPLUS)
     data[2].value = -((__s32)g_acc_val.Z_acc - 2048);
 #else
     data[2].value = (__s32)g_acc_val.Z_acc - 2048;

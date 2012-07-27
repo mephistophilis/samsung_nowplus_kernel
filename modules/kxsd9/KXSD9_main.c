@@ -105,7 +105,7 @@ static struct file_operations KXSD9_fops =
 
 static struct miscdevice KXSD9_misc_device = {
     .minor = MISC_DYNAMIC_MINOR,
-    .name = "accel",
+    .name = "accelerometer",
     .fops = &KXSD9_fops,
 };
 
