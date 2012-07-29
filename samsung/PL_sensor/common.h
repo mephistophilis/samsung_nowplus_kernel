@@ -15,7 +15,7 @@
 
 // #define DEVICE_NAME "GP2AP002A00F"
 #define DEVICE_NAME "PL_driver"
-// #define PL_DEBUG  
+#define PL_DEBUG  
 
 #define error(fmt,arg...) printk(KERN_CRIT "[PROX_LIGHT]" fmt "\n",## arg)
 

@@ -91,10 +91,10 @@ typedef struct
 #if defined(CONFIG_MACH_SAMSUNG_ARCHER) && (CONFIG_ARCHER_REV >= ARCHER_REV11) 
 #define P_IRQ OMAP_GPIO_IRQ(28)         
 #else 
-#define P_IRQ OMAP_GPIO_IRQ(53)         // ryun PROXIMITY
+//#define P_IRQ OMAP_GPIO_IRQ(53)         // ryun PROXIMITY
 #endif 
 //#define OMAP3430_GPIO_PS_OUT 53 // ryun 
-//#define P_IRQ OMAP_GPIO_IRQ(OMAP3430_GPIO_PS_OUT)
+#define P_IRQ OMAP_GPIO_IRQ(OMAP_GPIO_PS_OUT)
 //#define P_IRQ OMAP_GPIO_IRQ(27) // ryun EARJACK
 
 /*extern functions*/
