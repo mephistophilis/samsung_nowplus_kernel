@@ -29,9 +29,9 @@ menu "Immersion Touch Sense Driver (vibetonz)"
 source "samsung/vibetonz/Kconfig"
 endmenu
 
-#menu "Samsung Battery Driver"
-#source "samsung/battery/Kconfig"
-#endmenu
+menu "Samsung Battery Driver"
+source "samsung/battery/Kconfig"
+endmenu
 
 menu "Samsung Proximity/Light Sensor Driver"
 source "samsung/PL_sensor/Kconfig"
@@ -39,6 +39,18 @@ endmenu
 
 menu "Kionix KXSD9 Accelerometer Driver"
 source "samsung/kxsd9/Kconfig"
+endmenu
+
+menu "Samsung Dpram Driver"
+source "samsung/dpram/Kconfig"
+endmenu
+
+menu "Samsung Multiple Packet Data Protocol Support"
+source "samsung/multipdp/Kconfig"
+endmenu
+
+menu "Si4709 FM radio"
+source "samsung/fm_si4709/Kconfig"
 endmenu
 
 endmenu

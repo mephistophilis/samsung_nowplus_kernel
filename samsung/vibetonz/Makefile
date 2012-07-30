@@ -3,8 +3,6 @@
 #
 
 EXTRA_CFLAGS	+= -I$(srctree)/drivers/staging/android
-
-obj-m += vibetonz.o
-
-vibetonz-objs += tspdrv.o 
+obj-$(CONFIG_SAMSUNG_VIBETONZ) += vibetonz.o
+vibetonz-y := tspdrv.o 
 

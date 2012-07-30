@@ -29,9 +29,7 @@
 #ifndef __KERNEL__
 #define __KERNEL__
 #endif
-#ifndef MODULE
-#define MODULE
-#endif
+
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -235,14 +233,8 @@ static struct platform_device platdev =
 	},
 };
 
-/* Module info */
-MODULE_AUTHOR("Immersion Corporation");
-MODULE_DESCRIPTION("TouchSense Kernel Module");
-MODULE_LICENSE("GPL v2");
 
-
-
-int init_module(void)
+static int tspdrv_init(void)
 {
     int nRet, i;   /* initialized below */
 
@@ -301,7 +293,7 @@ int init_module(void)
     return 0;
 }
 
-void cleanup_module(void)
+static void tspdrv_exit(void)
 {
     DbgOut((KERN_INFO "tspdrv: cleanup_module.\n"));
 
@@ -322,8 +314,6 @@ static int open(struct inode *inode, struct file *file)
 {
     DbgOut((KERN_INFO "tspdrv: open.\n"));
 
-    if (!try_module_get(THIS_MODULE)) return -ENODEV;
-
     return 0; 
 }
 
@@ -337,8 +327,6 @@ static int release(struct inode *inode, struct file *file)
     ** driver is run outside of immvibed for testing purposes.
     */
     VibeOSKernelLinuxStopTimer();
-
-    module_put(THIS_MODULE);
 
     return 0; 
 }
@@ -591,3 +579,13 @@ static void platform_release(struct device *dev)
 {	
     DbgOut((KERN_INFO "tspdrv: platform_release.\n"));
 }
+
+
+module_init(tspdrv_init);
+module_exit(tspdrv_exit);
+
+
+/* Module info */
+MODULE_AUTHOR("Immersion Corporation");
+MODULE_DESCRIPTION("TouchSense Kernel Module");
+MODULE_LICENSE("GPL v2");

@@ -46,10 +46,12 @@
 
 #include "dpram.h"
 
+
 #define DRIVER_ID			"[DPRAM] dpram driver is loaded."
 #define DRIVER_NAME 		"DPRAM"
 #define DRIVER_PROC_ENTRY	"driver/dpram"
 #define DRIVER_MAJOR_NUM	255
+
 
 #ifdef CONFIG_EVENT_LOGGING
 #define DPRAM_ID			3
@@ -87,19 +89,12 @@
 #define GPIO_LEVEL_LOW				0
 #define GPIO_LEVEL_HIGH				1
 
-#define OMAP3430_GPIO_ALARM_AP 14
-#define OMAP3430_GPIO_nDPRAM_INT	15
-#define DPRAM_PDA_ACTIVE_GPIO	111
-#define OMAP3430_GPIO_FONE_ON	140
-#define OMAP3430_GPIO_PHONE_ACTIVE18	154
-#define OMAP3430_GPIO_nMSM_RST	178
-
 
 static void __iomem *dpram_base = 0;
 
 static int phone_shutdown = 0;
 
-static int dpram_phone_getstatus();
+static int dpram_phone_getstatus(void);
 #define DPRAM_VBASE dpram_base
 
 static struct tty_driver *dpram_tty_driver;
@@ -130,7 +125,7 @@ static dpram_device_t dpram_table[MAX_INDEX] = {
 		.out_tail_addr = DPRAM_PDA2PHONE_RAW_TAIL_ADDRESS,
 		.out_buff_addr = DPRAM_PDA2PHONE_RAW_BUFFER_ADDRESS,
 		.out_buff_size = DPRAM_PDA2PHONE_RAW_SIZE,
-	
+
 		.mask_req_ack = INT_MASK_REQ_ACK_R,
 		.mask_res_ack = INT_MASK_RES_ACK_R,
 		.mask_send = INT_MASK_SEND_R,
@@ -180,6 +175,7 @@ static DECLARE_WAIT_QUEUE_HEAD(phone_power_wait);
 static DECLARE_MUTEX(write_mutex);
 
 struct wake_lock dpram_wake_lock;
+
 
 #ifdef CONFIG_EVENT_LOGGING
 static inline EVENT_HEADER *getPayloadHeader(int flag, int size)
@@ -295,7 +291,7 @@ static inline int WRITE_TO_DPRAM_VERIFY(u32 dest, void *src, int size)
 {
 
 	int cnt = 3;
-	
+
 	while (cnt--) {
 		_memcpy((void *)(DPRAM_VBASE + dest), (void *)src, size);
 
@@ -311,14 +307,14 @@ static inline int READ_FROM_DPRAM_VERIFY(void *dest, u32 src, int size)
 {
 
 	int cnt = 3;
-	
+
 	while (cnt--) {
 		_memcpy((void *)dest, (void *)(DPRAM_VBASE + src), size);
 
 		if (!_memcmp((u16 *)dest, (u16 *)(DPRAM_VBASE + src), size))
 			return 0;
 	}
-	
+
 	return -1;
 
 }
@@ -381,7 +377,7 @@ static int dpram_write(dpram_device_t *device,
 
 	u16 freesize = 0;
 	u16 next_head = 0;
-	
+
 	u16 head, tail;
 	u16 irq_mask = 0;
 
@@ -425,7 +421,7 @@ static int dpram_write(dpram_device_t *device,
 			head = next_head;
 
 			WRITE_TO_DPRAM_VERIFY(device->out_head_addr, &head, sizeof(head));
-				
+
 		}
 		else {
 			count++;
@@ -434,7 +430,7 @@ static int dpram_write(dpram_device_t *device,
 				break;
 			}
 		}
-			
+
 		irq_mask = INT_MASK_VALID;
 
 		if (retval > 0)
@@ -447,7 +443,7 @@ static int dpram_write(dpram_device_t *device,
 			send_interrupt_to_phone(irq_mask);
 			break;
 		}
-		
+
 	}
 
 #ifdef _DPRAM_DEBUG_HEXDUMP
@@ -488,8 +484,14 @@ static int dpram_read(dpram_device_t *device, const u16 non_cmd)
 {
 	int retval = 0;
 	int size = 0;
+    unsigned char *p_data;
+    int data_size;
 
 	u16 head, tail, up_tail;
+
+    // todo: only do sms fix on /dpram0
+    // if (device==(unsigned long)&dpram_table[FORMATTED_INDEX])
+    //  ...
 
 	READ_FROM_DPRAM_VERIFY(&head, device->in_head_addr, sizeof(head));
 	READ_FROM_DPRAM_VERIFY(&tail, device->in_tail_addr, sizeof(tail));
@@ -506,13 +508,16 @@ static int dpram_read(dpram_device_t *device, const u16 non_cmd)
 		if (head > tail) {
 			size = head - tail;
 			retval = dpram_tty_insert_data(device, (unsigned char *)(DPRAM_VBASE + (device->in_buff_addr + tail)), size);
-			
+
 		    if (retval != size)
 			dprintk("Size Mismatch : Real Size = %d, Returned Size = %d\n", size, retval);
-			
+
 #ifdef _DPRAM_DEBUG_HEXDUMP
-			hexdump((unsigned char *)(DPRAM_VBASE + (device->in_buff_addr + tail)), size);
+            p_data = (unsigned char *)(DPRAM_VBASE + (device->in_buff_addr + tail));
+            data_size = size;
+			hexdump(p_data, data_size);
 #endif
+
 		}
 		else {
 			int tmp_size = 0;
@@ -524,25 +529,28 @@ static int dpram_read(dpram_device_t *device, const u16 non_cmd)
 
 			if (retval != tmp_size)
 				dprintk("Size Mismatch : Real Size = %d, Returned Size = %d\n", tmp_size, retval);
-				
-			
+
 #ifdef _DPRAM_DEBUG_HEXDUMP
-			hexdump((unsigned char *)(DPRAM_VBASE + (device->in_buff_addr + tail)), tmp_size);
+			p_data = (unsigned char *)(DPRAM_VBASE + (device->in_buff_addr + tail));
+            data_size = tmp_size;
+			hexdump(p_data, data_size);
 #endif
 
 			if (size > tmp_size) {
 				dpram_tty_insert_data(device, (unsigned char *)(DPRAM_VBASE + device->in_buff_addr), size - tmp_size);
-				
 #ifdef _DPRAM_DEBUG_HEXDUMP
-				hexdump((unsigned char *)(DPRAM_VBASE + device->in_buff_addr), size - tmp_size);
+                p_data = (unsigned char *)(DPRAM_VBASE + device->in_buff_addr);
+                data_size = size - tmp_size;
+                hexdump(p_data, data_size);
 #endif
 				retval += (size - tmp_size);
 			}
 
 		}
 
-		up_tail = (u16)((tail + retval) % device->in_buff_size);
+        up_tail = (u16)((tail + retval) % device->in_buff_size);
 		WRITE_TO_DPRAM_VERIFY(device->in_tail_addr, &up_tail, sizeof(up_tail));
+
 	}
 
 #ifdef _DPRAM_DEBUG_HEXDUMP
@@ -565,7 +573,7 @@ static void dpram_clear(void)
 {
 	long i = 0;
 	unsigned long flags;
-	
+
 	u16 value = 0;
 
 	local_irq_save(flags);
@@ -636,42 +644,41 @@ static void dpram_drop_data(dpram_device_t *device)
 
 static void dpram_phone_power_on(void)
 {
-	printk("[OneDram] phone power on.\n");
-	int pin_active = gpio_get_value(OMAP3430_GPIO_PHONE_ACTIVE18);
-	
+	int pin_active = gpio_get_value(OMAP_GPIO_PHONE_ACTIVE);
+
 	printk(KERN_ERR "[DPRAM] phone power on is called.\n");
 
 	switch (pin_active) {
 		case GPIO_LEVEL_LOW:
 		    printk(KERN_ERR "[DPRAM] phone power on GPIO_LEVEL_LOW\n");
-			gpio_set_value(OMAP3430_GPIO_nMSM_RST, GPIO_LEVEL_HIGH);
-	
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_MSM_RST18_N, GPIO_LEVEL_HIGH);
+
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_LOW);
 			interruptible_sleep_on_timeout(&phone_power_wait, 50);
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
 			interruptible_sleep_on_timeout(&phone_power_wait, 50);
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_LOW);
 			break;
 
 		case GPIO_LEVEL_HIGH:
 		    printk(KERN_ERR "[DPRAM] phone power on GPIO_LEVEL_HIGH\n");
-			gpio_set_value(OMAP3430_GPIO_nMSM_RST, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_MSM_RST18_N, GPIO_LEVEL_LOW);
 
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
 			interruptible_sleep_on_timeout(&phone_power_wait, 50);
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_LOW);
 			interruptible_sleep_on_timeout(&phone_power_wait, 50);
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
 
 			interruptible_sleep_on_timeout(&phone_power_wait, 50);
 
-			gpio_set_value(OMAP3430_GPIO_nMSM_RST, GPIO_LEVEL_HIGH);
+			gpio_set_value(OMAP_GPIO_MSM_RST18_N, GPIO_LEVEL_HIGH);
 
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_LOW);
 			interruptible_sleep_on_timeout(&phone_power_wait, 50);
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_HIGH);
 			interruptible_sleep_on_timeout(&phone_power_wait, 50);
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_LOW);
 			break;
 	}
 
@@ -688,19 +695,19 @@ static void dpram_phone_power_off(void)
 			&ac_code, sizeof(ac_code));
 
     WRITE_TO_DPRAM(DPRAM_PDA2PHONE_INTERRUPT_ADDRESS, &phone_off, DPRAM_INTERRUPT_PORT_SIZE);
-    
+
 }
 
 static int dpram_phone_getstatus(void)
 {
-	return gpio_get_value(OMAP3430_GPIO_PHONE_ACTIVE18);
+	return gpio_get_value(OMAP_GPIO_PHONE_ACTIVE);
 }
 
 static void dpram_phone_reset(void)
 {
-	gpio_set_value(OMAP3430_GPIO_nMSM_RST, 0);
+	gpio_set_value(OMAP_GPIO_MSM_RST18_N, 0);
 	interruptible_sleep_on_timeout(&phone_power_wait, 50);
-	gpio_set_value(OMAP3430_GPIO_nMSM_RST, 1);
+	gpio_set_value(OMAP_GPIO_MSM_RST18_N, 1);
 }
 
 static void dpram_phone_ramdump(void)
@@ -724,6 +731,7 @@ static void dpram_mem_rw(struct _mem_param *param)
 }
 
 #ifdef CONFIG_PROC_FS
+
 static int dpram_read_proc(char *page, char **start, off_t off,
 		int count, int *eof, void *data)
 {
@@ -740,31 +748,31 @@ static int dpram_read_proc(char *page, char **start, off_t off,
 	char buf[DPRAM_ERR_MSG_LEN];
 	unsigned long flags;
 #endif
-	
+
 	READ_FROM_DPRAM((void *)&magic, DPRAM_MAGIC_CODE_ADDRESS, sizeof(magic));
 	READ_FROM_DPRAM((void *)&enable, DPRAM_ACCESS_ENABLE_ADDRESS, sizeof(enable));
 
-	READ_FROM_DPRAM((void *)&fmt_in_head, DPRAM_PHONE2PDA_FORMATTED_HEAD_ADDRESS, 
+	READ_FROM_DPRAM((void *)&fmt_in_head, DPRAM_PHONE2PDA_FORMATTED_HEAD_ADDRESS,
 			sizeof(fmt_in_head));
-	READ_FROM_DPRAM((void *)&fmt_in_tail, DPRAM_PHONE2PDA_FORMATTED_TAIL_ADDRESS, 
+	READ_FROM_DPRAM((void *)&fmt_in_tail, DPRAM_PHONE2PDA_FORMATTED_TAIL_ADDRESS,
 		    sizeof(fmt_in_tail));
-	READ_FROM_DPRAM((void *)&fmt_out_head, DPRAM_PDA2PHONE_FORMATTED_HEAD_ADDRESS, 
+	READ_FROM_DPRAM((void *)&fmt_out_head, DPRAM_PDA2PHONE_FORMATTED_HEAD_ADDRESS,
 		    sizeof(fmt_out_head));
-	READ_FROM_DPRAM((void *)&fmt_out_tail, DPRAM_PDA2PHONE_FORMATTED_TAIL_ADDRESS, 
+	READ_FROM_DPRAM((void *)&fmt_out_tail, DPRAM_PDA2PHONE_FORMATTED_TAIL_ADDRESS,
 		    sizeof(fmt_out_tail));
 
-	READ_FROM_DPRAM((void *)&raw_in_head, DPRAM_PHONE2PDA_RAW_HEAD_ADDRESS, 
+	READ_FROM_DPRAM((void *)&raw_in_head, DPRAM_PHONE2PDA_RAW_HEAD_ADDRESS,
 		    sizeof(raw_in_head));
-	READ_FROM_DPRAM((void *)&raw_in_tail, DPRAM_PHONE2PDA_RAW_TAIL_ADDRESS, 
+	READ_FROM_DPRAM((void *)&raw_in_tail, DPRAM_PHONE2PDA_RAW_TAIL_ADDRESS,
 		    sizeof(raw_in_tail));
-	READ_FROM_DPRAM((void *)&raw_out_head, DPRAM_PDA2PHONE_RAW_HEAD_ADDRESS, 
+	READ_FROM_DPRAM((void *)&raw_out_head, DPRAM_PDA2PHONE_RAW_HEAD_ADDRESS,
 		    sizeof(raw_out_head));
-	READ_FROM_DPRAM((void *)&raw_out_tail, DPRAM_PDA2PHONE_RAW_TAIL_ADDRESS, 
+	READ_FROM_DPRAM((void *)&raw_out_tail, DPRAM_PDA2PHONE_RAW_TAIL_ADDRESS,
 		    sizeof(raw_out_tail));
-    	
-	READ_FROM_DPRAM((void *)&in_interrupt, DPRAM_PHONE2PDA_INTERRUPT_ADDRESS, 
+
+	READ_FROM_DPRAM((void *)&in_interrupt, DPRAM_PHONE2PDA_INTERRUPT_ADDRESS,
 		    DPRAM_INTERRUPT_PORT_SIZE);
-	READ_FROM_DPRAM((void *)&out_interrupt, DPRAM_PDA2PHONE_INTERRUPT_ADDRESS, 
+	READ_FROM_DPRAM((void *)&out_interrupt, DPRAM_PDA2PHONE_INTERRUPT_ADDRESS,
 		    DPRAM_INTERRUPT_PORT_SIZE);
 
 	READ_FROM_DPRAM((void *)&silent_reset_bit, DPRAM_SILENT_RESET, sizeof(silent_reset_bit));
@@ -810,9 +818,9 @@ static int dpram_read_proc(char *page, char **start, off_t off,
 #endif
 
 			(dpram_phone_getstatus() ? "ACTIVE" : "INACTIVE"),
-			gpio_get_value(OMAP3430_GPIO_nDPRAM_INT),
+			gpio_get_value(OMAP_GPIO_INT_ONEDRAM_AP),
 			forced_dpram_wakeup,
-			silent_reset_bit	
+			silent_reset_bit
 		);
 
 	len = (p - page) - off;
@@ -893,7 +901,7 @@ static int dpram_tty_ioctl(struct tty_struct *tty, struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
 	unsigned int val;
-	
+	//void __user *argp = (void __user *)arg;
 	//printk("[DPRAM] dpram_tty_ioctl: cmd=%d.\n", cmd);
 
 
@@ -907,7 +915,7 @@ static int dpram_tty_ioctl(struct tty_struct *tty, struct file *file,
 		    printk("DPRAM_PHONE_GETSTATUS\n");
 			val = dpram_phone_getstatus();
 			return copy_to_user((unsigned int *)arg, &val, sizeof(val));
-			
+
 		case DPRAM_PHONE_POWON:
     		printk("DPRAM_PHONE_POWON\n");
 			dpram_phone_power_on();
@@ -935,7 +943,7 @@ static int dpram_tty_ioctl(struct tty_struct *tty, struct file *file,
 			val = copy_to_user((void __user *)arg, aDGSBuf, DPRAM_DGS_INFO_BLOCK_SIZE);
 			return 0;
 		}
-	
+
 		case DPRAM_PHONE_RESET:
 		    printk("DPRAM_PHONE_RESET\n");
 			dpram_silent_reset = 1;
@@ -943,7 +951,7 @@ static int dpram_tty_ioctl(struct tty_struct *tty, struct file *file,
 			dpram_phone_reset();
 
 			WRITE_TO_DPRAM(DPRAM_SILENT_RESET, &dpram_silent_reset, sizeof(dpram_silent_reset));
-			
+
 			printk("[DPRAM] modem is silently rebooted.\n");
 
 			return 0;
@@ -975,7 +983,7 @@ static int dpram_tty_ioctl(struct tty_struct *tty, struct file *file,
 	}
 
 	return -ENOIOCTLCMD;
-	
+
 }
 
 static int dpram_tty_chars_in_buffer(struct tty_struct *tty)
@@ -989,7 +997,7 @@ static int dpram_tty_chars_in_buffer(struct tty_struct *tty)
 		READ_FROM_DPRAM_VERIFY(&head, device->out_head_addr, sizeof(head));
 		READ_FROM_DPRAM_VERIFY(&tail, device->out_tail_addr, sizeof(tail));
 
-		
+
 		data = (head > tail) ? head - tail - 1 :
 			device->out_buff_size - tail + head;
 
@@ -1026,7 +1034,7 @@ static int dpram_err_read(struct file *filp, char *buf, size_t count, loff_t *pp
 			}
 
 			dpram_err_len = 0;
-			
+
 			local_irq_restore(flags);
 			break;
 		}
@@ -1063,7 +1071,7 @@ static unsigned int dpram_err_poll(struct file *filp,
 	poll_wait(filp, &dpram_err_wait_q, wait);
 	return ((dpram_err_len) ? (POLLIN | POLLRDNORM) : 0);
 }
-#endif	
+#endif
 
 static void res_ack_tasklet_handler(unsigned long data)
 {
@@ -1227,7 +1235,7 @@ static void non_command_handler(u16 non_cmd)
 		wake_lock_timeout(&dpram_wake_lock, DPRAM_WAKELOCK_TIMEOUT/2);
 		dpram_tasklet_data[FORMATTED_INDEX].device = &dpram_table[FORMATTED_INDEX];
 		dpram_tasklet_data[FORMATTED_INDEX].non_cmd = non_cmd;
-		
+
 		fmt_send_tasklet.data = (unsigned long)&dpram_tasklet_data[FORMATTED_INDEX];
 		tasklet_schedule(&fmt_send_tasklet);
 	}
@@ -1262,7 +1270,7 @@ void check_int_pin_level(void)
 	while (cnt++ < 3) {
 		READ_FROM_DPRAM(&mask, DPRAM_PHONE2PDA_INTERRUPT_ADDRESS, sizeof(mask));
 
-		if (!gpio_get_value(OMAP3430_GPIO_nDPRAM_INT))
+		if (!gpio_get_value(OMAP_GPIO_INT_ONEDRAM_AP))
 			break;
 	}
 }
@@ -1318,16 +1326,16 @@ static void phone_error_off_message_handler(int status)
 	}
 
 	printk(KERN_INFO"[PHONE ERROR] ->> %s\n", buf);
-#if 1	
+#if 1
 
 	if(1){
-		printk(KERN_INFO"[DPRAM] alarm boot pin status : %d\n", gpio_get_value(OMAP3430_GPIO_ALARM_AP));
-		if(status==MESG_PHONE_OFF && !gpio_get_value(OMAP3430_GPIO_ALARM_AP))
+		printk(KERN_INFO"[DPRAM] alarm boot pin status : %d\n", gpio_get_value(OMAP_GPIO_AP_ALARM));
+		if(status==MESG_PHONE_OFF && !gpio_get_value(OMAP_GPIO_AP_ALARM))
 		{
 			printk(KERN_INFO"[DPRAM] Keep Low Modem.\n");
 			phone_shutdown = 1;
-			gpio_set_value(OMAP3430_GPIO_FONE_ON, GPIO_LEVEL_LOW);
-			gpio_set_value(OMAP3430_GPIO_nMSM_RST, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_FONE_ON, GPIO_LEVEL_LOW);
+			gpio_set_value(OMAP_GPIO_MSM_RST18_N, GPIO_LEVEL_LOW);
 		}
 	}
 
@@ -1348,7 +1356,7 @@ int curr_phone_state=0;
 
 static irqreturn_t phone_active_irq_handler(int irq, void *dev_id)
 {
-	if (gpio_get_value(OMAP3430_GPIO_PHONE_ACTIVE18))
+	if (gpio_get_value(OMAP_GPIO_PHONE_ACTIVE))
 		curr_phone_state = 2;
 	else
 		curr_phone_state = 1;
@@ -1411,7 +1419,7 @@ static int register_dpram_err_device(void)
 	}
 
 	dpram_err_dev_t = device_create(dpram_class, NULL,
-			MKDEV(DRIVER_MAJOR_NUM, 0), NULL, DPRAM_ERR_DEVICE);			
+			MKDEV(DRIVER_MAJOR_NUM, 0), NULL, DPRAM_ERR_DEVICE);
 
 	if (IS_ERR(dpram_err_dev_t))
 	{
@@ -1460,7 +1468,7 @@ static int register_dpram_driver(void)
 		put_tty_driver(dpram_tty_driver);
 		return retval;
 	}
-	
+
 	return 0;
 }
 
@@ -1495,13 +1503,13 @@ static int register_interrupt_handler(void)
 	unsigned int dpram_irq, phone_active_irq;
 	int retval = 0;
 
-	dpram_irq = OMAP_GPIO_IRQ(OMAP3430_GPIO_nDPRAM_INT);
-	phone_active_irq = OMAP_GPIO_IRQ(OMAP3430_GPIO_PHONE_ACTIVE18);
+	dpram_irq = OMAP_GPIO_IRQ(OMAP_GPIO_INT_ONEDRAM_AP);
+	phone_active_irq = OMAP_GPIO_IRQ(OMAP_GPIO_PHONE_ACTIVE);
 
 	dpram_clear();
 
-	set_irq_type(OMAP_GPIO_IRQ(OMAP3430_GPIO_PHONE_ACTIVE18), IRQ_TYPE_EDGE_BOTH);
-	set_irq_type(OMAP_GPIO_IRQ(OMAP3430_GPIO_nDPRAM_INT), IRQ_TYPE_LEVEL_LOW);
+	set_irq_type(OMAP_GPIO_IRQ(OMAP_GPIO_PHONE_ACTIVE), IRQ_TYPE_EDGE_BOTH);
+	set_irq_type(OMAP_GPIO_IRQ(OMAP_GPIO_INT_ONEDRAM_AP), IRQ_TYPE_LEVEL_LOW);
 
 	retval = request_irq(dpram_irq, dpram_interrupt, IRQF_DISABLED, DRIVER_NAME, NULL);
 
@@ -1527,11 +1535,11 @@ static void check_miss_interrupt(void)
 {
 	unsigned long flags;
 
-	if (gpio_get_value(OMAP3430_GPIO_PHONE_ACTIVE18) && !gpio_get_value(OMAP3430_GPIO_nDPRAM_INT)) {
+	if (gpio_get_value(OMAP_GPIO_PHONE_ACTIVE) && !gpio_get_value(OMAP_GPIO_INT_ONEDRAM_AP)) {
 		dprintk("there is a missed interrupt. try to read it!\n");
 
 		local_irq_save(flags);
-		dpram_interrupt(OMAP_GPIO_IRQ(OMAP3430_GPIO_nDPRAM_INT), NULL);
+		dpram_interrupt(OMAP_GPIO_IRQ(OMAP_GPIO_INT_ONEDRAM_AP), NULL);
 		local_irq_restore(flags);
 	}
 
@@ -1539,13 +1547,13 @@ static void check_miss_interrupt(void)
 
 static int dpram_suspend(struct platform_device *dev, pm_message_t state)
 {
-	gpio_direction_output(OMAP_GPIO_PDA_ACTIVE, 0);
+	gpio_set_value(OMAP_GPIO_PDA_ACTIVE, 0);
 	return 0;
 }
 
 static int dpram_resume(struct platform_device *dev)
 {
-	gpio_direction_output(OMAP_GPIO_PDA_ACTIVE, 1);
+	gpio_set_value(OMAP_GPIO_PDA_ACTIVE, 1);
 	check_miss_interrupt();
 	return 0;
 }
@@ -1554,12 +1562,6 @@ void enable_dpram_pins(void)
 {
 	int ret;
 
-	/*PDA ACTIVE*/
-	if(gpio_request(OMAP_GPIO_PDA_ACTIVE, "OMAP_GPIO_PDA_ACTIVE") < 0 ){
-    		printk(KERN_ERR"\n FAILED TO REQUEST GPIO %d \n",OMAP_GPIO_PDA_ACTIVE);
-    		return;
-  	}
-		
 	ret = gpio_request( OMAP_GPIO_PHONE_ACTIVE, "OMAP_GPIO_PHONE_ACTIVE");
 	if (ret < 0)
 	{
@@ -1580,7 +1582,7 @@ void enable_dpram_pins(void)
 		printk( "fail to get gpio : %d, res : %d\n", OMAP_GPIO_FONE_ON, ret );
 		return;
 	}
-	
+
 	ret = gpio_request( OMAP_GPIO_MSM_RST18_N, "OMAP_GPIO_MSM_RST18_N");
 	if (ret < 0)
 	{
@@ -1588,21 +1590,29 @@ void enable_dpram_pins(void)
 		return;
 	}
 
-	ret = gpio_request( OMAP3430_GPIO_ALARM_AP, "OMAP3430_GPIO_ALARM_AP");
+	ret = gpio_request( OMAP_GPIO_AP_ALARM, "OMAP_GPIO_AP_ALARM");
 	if (ret < 0)
 	{
-		printk( "fail to get gpio : %d, res : %d\n", OMAP3430_GPIO_ALARM_AP, ret );
+		printk( "fail to get gpio : %d, res : %d\n", OMAP_GPIO_AP_ALARM, ret );
 		//return;
 	}
-	
-	gpio_direction_output(OMAP_GPIO_PDA_ACTIVE, 1);
+
+	gpio_set_value(OMAP_GPIO_PDA_ACTIVE, 1);
 	gpio_direction_input( OMAP_GPIO_PHONE_ACTIVE );
 	gpio_direction_input( OMAP_GPIO_INT_ONEDRAM_AP );
 	gpio_direction_output( OMAP_GPIO_FONE_ON, 0 );
 	gpio_direction_output( OMAP_GPIO_MSM_RST18_N, 0 );
-	gpio_direction_input(OMAP3430_GPIO_ALARM_AP);
+	gpio_direction_input(OMAP_GPIO_AP_ALARM);
 
 	return;
+}
+void disable_dpram_pins(void)
+{
+	gpio_free( OMAP_GPIO_PHONE_ACTIVE );
+	gpio_free( OMAP_GPIO_INT_ONEDRAM_AP );
+	gpio_free( OMAP_GPIO_FONE_ON );
+	gpio_free( OMAP_GPIO_MSM_RST18_N );
+    gpio_free( OMAP_GPIO_AP_ALARM );
 }
 
 static int dpram_shared_bank_remap(void)
@@ -1616,7 +1626,7 @@ static int dpram_shared_bank_remap(void)
 		printk("failed ioremap\n");
 		return -ENOENT;
 	}
-	
+
 	return 0;
 }
 
@@ -1647,7 +1657,7 @@ static int __devinit dpram_probe(struct platform_device *dev)
 	enable_dpram_pins();
 
 	dpram_shared_bank_remap();
-	
+
 	if ((retval = register_interrupt_handler()) < 0) {
 		return -1;
 	}
@@ -1670,7 +1680,7 @@ void dpram_forced_phoneoff(void)
 	u8 buf[12] = {0x7F, 0x0A, 0x00, 0x50, 0x07, 0x00, 0xFF, 0x00, 0x01, 0x02, 0x01, 0x7E};
 	dpram_write(device, buf, 12);
 
-	if(gpio_get_value(OMAP3430_GPIO_PHONE_ACTIVE18)){
+	if(gpio_get_value(OMAP_GPIO_PHONE_ACTIVE)){
 		WRITE_TO_DPRAM(DPRAM_PDA2PHONE_INTERRUPT_ADDRESS, &phone_off, DPRAM_INTERRUPT_PORT_SIZE);
 		printk(KERN_ERR "[dpram] forced phone power off called.\n");
 	}
@@ -1684,26 +1694,26 @@ static int __devexit dpram_remove(struct platform_device *dev)
 	unregister_dpram_err_device();
 #endif
 
-	free_irq(OMAP_GPIO_IRQ(OMAP3430_GPIO_nDPRAM_INT), NULL);
-	free_irq(OMAP_GPIO_IRQ(OMAP3430_GPIO_PHONE_ACTIVE18), NULL);
+	free_irq(OMAP_GPIO_IRQ(OMAP_GPIO_INT_ONEDRAM_AP), NULL);
+	free_irq(OMAP_GPIO_IRQ(OMAP_GPIO_PHONE_ACTIVE), NULL);
 
 	kill_tasklets();
-	
-	//gpio_free( OMAP_GPIO_PHONE_ACTIVE );
-	//gpio_free( OMAP_GPIO_INT_ONEDRAM_AP );
-	//gpio_free( OMAP_GPIO_FONE_ON );
-	//gpio_free( OMAP_GPIO_MSM_RST18_N );
+
+    remove_proc_entry(DRIVER_PROC_ENTRY, NULL);
+
+    // can't disable here, pins needed in power down sequence
+    // -> todo move enable_dpram_pins to boardfile
+    //disable_dpram_pins();
 
 	return 0;
 }
 
-static int dpram_shutdown(struct platform_device *dev)
+static void dpram_shutdown(struct platform_device *dev)
 {
     dpram_forced_phoneoff();
-	
+
 	printk("modem power off...\n");
 
-	return 0;
 }
 
 static struct platform_driver platform_dpram_driver = {
@@ -1723,7 +1733,7 @@ static int __init dpram_init(void)
 	__do_forced_modemoff = dpram_forced_phoneoff;
 	return platform_driver_register(&platform_dpram_driver);
 
-	
+
 }
 
 static void __exit dpram_exit(void)

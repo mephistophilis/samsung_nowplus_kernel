@@ -1,4 +1,4 @@
-obj-m := samsung_battery.o
+obj-$(CONFIG_SAMSUNG_BATTERY) := samsung_battery.o
 samsung_battery-y :=
 samsung_battery-y += battery_monitor.o
 samsung_battery-y += charger_max8845.o

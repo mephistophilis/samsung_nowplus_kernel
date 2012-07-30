@@ -142,16 +142,4 @@ config CHARGER_PCF50633
 	help
 	 Say Y to include support for NXP PCF50633 Main Battery Charger.
 
-config SAMSUNG_BATTERY
-	tristate "SAMSUNG_BATTERY"
-    depends on I2C
-	help
-	 Say Y to include support for Samsung battery driver.
-	default y
-config SAMSUNG_BATTERY_TESTMODE
-	bool "SAMSUNG_BATTERY_TESTMODE"	
-	help
-	 Say Y to test battery driver.
-	depends on SAMSUNG_BATTERY
-
 endif # POWER_SUPPLY

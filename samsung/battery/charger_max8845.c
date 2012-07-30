@@ -35,6 +35,7 @@
 #include <plat/microusbic.h>
 #include <plat/omap3-gptimer12.h>
 #include "common.h"
+#include <mach/board-nowplus.h>
 #ifdef CONFIG_USB_SWITCH_FSA9480
 #include <linux/fsa9480.h>
 #endif
@@ -188,7 +189,7 @@ int _check_full_charge_dur_sleep_( void )
 {
 	int ret = 0;
 
-#if 1
+#if 0 //me change
 	int chg_ing_level = 0;
 	int i;
 	unsigned char confirm_full = 0x0;
@@ -215,11 +216,12 @@ int _check_full_charge_dur_sleep_( void )
 
 	is_chg_pin_wakeup = omap34xx_pad_get_wakeup_status( KCHG_ING_GPIO ); 
 
-	if ( is_chg_pin_wakeup && sec_bci->battery.battery_level_vol >= 4100 )
-	{
+	//if ( is_chg_pin_wakeup && sec_bci->battery.battery_level_vol >= 4100 )
+	if (sec_bci->battery.battery_level_ptg >= 100 )
+        {
 		pdev = to_platform_device( this_dev );        
 		di = platform_get_drvdata( pdev );
-		change_charge_status( POWER_SUPPLY_STATUS_FULL, di, CHARGE_DUR_SLEEP );
+		change_charge_status( POWER_SUPPLY_STATUS_FULL, CHARGE_DUR_SLEEP );
 		ret = 1;
 	}
 	else
@@ -458,6 +460,8 @@ static void enable_charging( bool is_sleep )
 // Input Argument :  
 // Return Value   : 
 {
+   int val;//me add
+   printk( "[TA] enable_charging sleep, %d !! \n", is_sleep );//me add
 #if 0 
 	if ( is_sleep )
 		omap_set_gpio_dataout_in_sleep( KCHG_EN_GPIO, 0 );
@@ -475,6 +479,9 @@ static void disable_charging( bool is_sleep )
 // Input Argument :  
 // Return Value   : 
 {
+   int val;//me add
+   printk( "[TA] disable_charging sleep, %d !! \n", is_sleep );//me add
+
 #if 0 
 	if ( is_sleep )
 		omap_set_gpio_dataout_in_sleep( KCHG_EN_GPIO, 1 ); 
@@ -482,7 +489,6 @@ static void disable_charging( bool is_sleep )
 #else
 		gpio_set_value( KCHG_EN_GPIO, 1 ); 
 #endif
-
 	sec_bci->charger.is_charging = false;
 }
 
@@ -630,6 +636,8 @@ static bool check_battery_vf( void )
 static void charger_set_cable(struct sec_battery_callbacks *ptr,
 	enum cable_type_t status)
 {
+
+printk( "charger_set_cable :----------------------------- \n");
 	struct charger_driver_info *di = container_of(ptr, struct charger_driver_info, callbacks);
 
 	di->cable_status = status;
@@ -698,6 +706,7 @@ static void cable_detection_work_handler( struct work_struct * work )
 // Input Argument :  
 // Return Value   : None
 {
+printk( "cable_detection_work_handler :----------------------------- \n");
 	struct charger_driver_info *di = container_of( work,
 							struct charger_driver_info,
 							cable_detection_work.work );
@@ -769,7 +778,7 @@ static void cable_detection_work_handler( struct work_struct * work )
 		if ( sec_bci->charger.cable_status == POWER_SUPPLY_TYPE_USB
 			|| sec_bci->charger.cable_status == POWER_SUPPLY_TYPE_MAINS )
 		{
-			//printk( "[TA] already Plugged.\n" );
+			printk( "[TA] already Plugged.\n" );
 			goto Out_IRQ_Cable_Det;
 		}
 
@@ -829,7 +838,7 @@ static void cable_detection_work_handler( struct work_struct * work )
 		if ( sec_bci->charger.prev_cable_status != POWER_SUPPLY_TYPE_BATTERY
 			&& sec_bci->charger.cable_status == POWER_SUPPLY_TYPE_BATTERY )
 		{
-			//printk( "[TA] already Unplugged.\n" );
+			printk( "[TA] already Unplugged.\n" );
 			goto Out_IRQ_Cable_Det;
 		}
 		else if ( sec_bci->charger.prev_cable_status == -1

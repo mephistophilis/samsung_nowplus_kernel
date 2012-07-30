@@ -18,8 +18,9 @@
 #include <asm/mach/irq.h>
 #include <asm/io.h>
 #include <linux/delay.h>
-#include <linux/timed_output.h>
+#include <timed_output.h>
 
+#include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/time.h>
 #include <linux/module.h>
@@ -49,7 +50,7 @@ enum
 {
     eTRUE,
     eFALSE,
-}dev_struct_status_t;
+}dev_struct_status1_t;
 
 /*dev_state*/
 /*power_state*/
@@ -366,6 +367,7 @@ int Si4709_dev_powerup(void)
     debug("Si4709_dev_powerup called");
 
     mutex_lock(&(Si4709_dev.lock)); 
+    enable_irq(Si4709_IRQ);
 
     if(!(RADIO_ON==Si4709_dev.state.power_state))
     {
@@ -464,7 +466,7 @@ int Si4709_dev_powerdown(void)
     {
         debug("powerdown failed");
     }
-
+    disable_irq(Si4709_IRQ);
     mutex_unlock(&(Si4709_dev.lock)); 
 
     return ret;

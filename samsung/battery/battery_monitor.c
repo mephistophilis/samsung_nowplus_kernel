@@ -35,7 +35,7 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 // ]
-//#include <mach/archer.h>
+#include <mach/nowplus.h>
 
 #define DRIVER_NAME "secBattMonitor"
 
@@ -80,38 +80,6 @@ static int NCP15WB473_batt_table[] =
 	5518,  5475,  5302,  5134,  4973,
 	4674
 };
-#if 0
-static int NCP15WB473_batt_table[] = 
-{
-    /* -15C ~ 85C */
-    
-    /*0[-15] ~  14[-1]*/
-    386533,363802,342567,322720,304162,
-    286799,270549,255331,241075,227712,
-    215182,203427,192394,182034,172302, 
-    /*15[0] ~ 34[19]*/
-    163156,154557,146469,138859,131694,
-    124947,118590,112599,106949,101621,
-     96592, 91845, 87363, 83128, 79126,
-     75342, 71764, 68379, 65175, 62141,
-    /*35[20] ~ 74[59]*/    
-     59268, 56546, 53966, 51520, 49201,
-     47000, 44912, 42929, 41046, 39257,
-     37558, 35942, 34406, 32945, 31555,
-     30232, 28972, 27773, 26630, 25542,
-     24504, 23515, 22571, 21672, 20813,
-     19993, 19211, 18463, 17750, 17068,
-     16416, 15793, 15197, 14627, 14082,
-     13560, 13060, 12582, 12124, 11685,
-    /*75[60] ~ 100[85]*/
-     11265, 10862, 10476, 10106,  9751,
-      9410,  9083,  8770,  8469,  8180,
-      7902,  7635,  7379,  7133,  6896,
-      6669,  6450,  6240,  6038,  5843,
-      5656,  5475,  5302,  5134,  4973,
-      4818
-};
-#endif
 
 struct battery_device_config
 // THIS CONFIG IS SET IN BOARD_FILE.(platform_data)
@@ -152,9 +120,6 @@ SEC_battery_charger_info *get_sec_bci( void )
 	return &sec_bci;
 }
 
-#if 0
-static unsigned int debug_fleeting_counter=0;
-#endif
 
 static struct wake_lock sec_bc_wakelock, adc_wakelock;
 
@@ -213,10 +178,10 @@ extern void normal_i2c_disinit( void );
 extern s32 t2_adc_data( u8 channel );
 
 extern unsigned long long sched_clock( void );
-
+#if defined(CONFIG_SAMSUNG_ARCHER_TARGET_SK)
 extern void (*sec_set_param_value)(int idx, void *value);
 extern void (*sec_get_param_value)(int idx, void *value);
-
+#endif
 
 // ------------------------------------------------------------------------- // 
 //                                                                           //
@@ -316,7 +281,6 @@ int _charger_state_change_( int category, int value, bool is_sleep )
 			sec_bci.charger.charging_timeout = DEFAULT_CHARGING_TIMEOUT;
 
 			sec_bci.charger.full_charge_dur_sleep = 0x0;
-			
 			break;
 
 		case POWER_SUPPLY_TYPE_MAINS :
@@ -421,7 +385,6 @@ int _charger_state_change_( int category, int value, bool is_sleep )
 		di = platform_get_drvdata( pdev );
 
 		cancel_delayed_work( &di->battery_monitor_work );
-		//schedule_delayed_work( &di->battery_monitor_work, 5 * HZ );
 		queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, 5 * HZ );	
 
 		power_supply_changed( &di->sec_battery );
@@ -676,10 +639,10 @@ static int get_elapsed_time_secs( unsigned long long *start )
 	}
 
 	do_div(diff, 1000000000L);
-
+#if 0 //me change
 	printk( KERN_DEBUG "[BR] now: %llu, start: %llu, diff:%d\n",
 		now, *start, (int)diff );
-
+#endif
 	return (int)diff;	
 		
 }
@@ -817,18 +780,6 @@ static int get_system_temperature( bool flag )
 
 	temp = t2adc_to_temperature( adc, device_config->TEMP_ADC_PORT );
 
-
-#if 0
-	/*get voltage(adc) from t2*/
-
-	adc = _get_t2adc_data_( 12 );
-
-	// vol = conv_result * step-size / R (TWLTRM Table 9-4)
-	mvolt = adc * 6000 / 1023; // mV
-
-	printk( "\n ## [BCI] VOL : %d\n\n", mvolt );
-    
-#endif
 	return temp;
 }
 
@@ -840,8 +791,10 @@ static int get_charging_current_adc_val( void )
 {
 	int adc;
 	
-	adc = _get_t2adc_data_( device_config->CHG_CURRENT_ADC_PORT );
-	
+	//adc = _get_t2adc_data_( device_config->CHG_CURRENT_ADC_PORT );//me close
+          
+	  adc = get_battery_level_ptg();//me add
+
 	//printk("                     [BR] CHG CURRENT ADC: %d, VOL: %d\n\n ", adc, (adc * 2500 / 1023) );
 	
 	return adc;
@@ -860,28 +813,20 @@ static int check_full_charge_using_chg_current( int charge_current_adc )
 		return 0;
 	}
 
-	/*
-	// change the frequency of monitoring
-	if ( sec_bci.battery.confirm_changing_freq < 5 )
-	{
-		int aa;
-		aa = CHARGE_FULL_CURRENT_ADC * 1.1;
-		
-		if ( charge_current_adc <= aa )
-			sec_bci.battery.confirm_changing_freq++;
-		else
-			sec_bci.battery.confirm_changing_freq = 0;
-	}
-	else
-	{
-		batt_gptimer_12.expire_time = 5; // sec
-		sec_bci.battery.monitor_duration = 5; // sec
-	}
-	*/
 
 	if (sec_bci.battery.support_monitor_full)
 	{
-		if ( charge_current_adc <= CHARGE_FULL_CURRENT_ADC )
+		//if ( charge_current_adc <= CHARGE_FULL_CURRENT_ADC )//me close
+                if ( charge_current_adc >= CHARGE_FULL_CURRENT_ADC )//me add
+               {
+			batt_gptimer_12.expire_time = MONITOR_DURATION_DUR_SLEEP;
+			sec_bci.battery.monitor_duration = MONITOR_DEFAULT_DURATION;
+			sec_bci.battery.confirm_full_by_current = 0;
+			return 1;
+		}	
+
+
+/*
 		{
 			sec_bci.battery.confirm_full_by_current++;
 
@@ -905,6 +850,7 @@ static int check_full_charge_using_chg_current( int charge_current_adc )
 				//sec_bci.battery.confirm_changing_freq = 0;
 			return 1;
 		}	
+*/ //me close
 	}
 	return 0; 
 }
@@ -936,8 +882,8 @@ static void get_system_status_in_sleep( int *battery_level_ptg,
 	temp_adc = t2_adc_data( device_config->TEMP_ADC_PORT );
 
 	if ( device_config->MONITORING_CHG_CURRENT )
-		*charge_current_adc = t2_adc_data ( device_config->CHG_CURRENT_ADC_PORT );
-
+		//*charge_current_adc = t2_adc_data ( device_config->CHG_CURRENT_ADC_PORT );//me close
+                *charge_current_adc = get_fuelgauge_ptg_value( CHARGE_DUR_SLEEP );//me add
 	normal_i2c_disinit();
 	twl4030_i2c_disinit();
 
@@ -1040,7 +986,7 @@ static int battery_monitor_core( bool is_sleep )
 		if ( sec_bci.battery.monitor_duration > MONITOR_RECHG_VOL_DURATION )
 			sec_bci.battery.monitor_duration = MONITOR_RECHG_VOL_DURATION;
 
-		if ( sec_bci.battery.battery_level_vol <= 4120 )
+		if ( sec_bci.battery.battery_level_vol <= 4100 )
 		{
 			sec_bci.battery.confirm_recharge++;
 			if ( sec_bci.battery.confirm_recharge >= 2 )
@@ -1078,13 +1024,13 @@ static void battery_monitor_work_handler( struct work_struct *work )
 							battery_monitor_work.work );
 	//printk("OPP: %d\n", resource_get_level("vdd1_opp"));
 	//printk( KERN_DEBUG "[BR] battery_monitor_work\n" );
-#if 0
-    /*
+#if 0//me open
+    
 	printk( "[BR] battery monitor [Level:%d, ADC:%d, TEMP.:%d, cable: %d] \n",\
 		get_battery_level_ptg(),\
 		get_battery_level_adc(),\
-		get_system_temperature(),\
-		sec_bci.charger.cable_status );*/
+		get_system_temperature(TEMP_DEG ),\
+		sec_bci.charger.cable_status );
 #endif
 
 	//printk("VF: %d\n", _get_t2adc_data_(1));
@@ -1098,7 +1044,12 @@ static void battery_monitor_work_handler( struct work_struct *work )
 		sec_bci.battery.battery_temp = get_system_temperature( TEMP_DEG );
 	else
 		sec_bci.battery.battery_temp = 0;
-
+#if 1 //me add 
+	printk( "[BR] monitor BATT.(%d%%, %dmV, %d*)\n", 
+			sec_bci.battery.battery_level_ptg,
+			sec_bci.battery.battery_level_vol,
+			sec_bci.battery.battery_temp );
+#endif
 
 	if( !( sec_bci.battery.monitor_field_temp ) 
 	 	&& !( sec_bci.battery.monitor_field_rechg_vol ) )
@@ -1496,12 +1447,12 @@ static int __devinit battery_probe( struct platform_device *pdev )
 	batt_gptimer_12.expire_time =(unsigned int) MONITOR_DURATION_DUR_SLEEP;
 	batt_gptimer_12.expire_callback = &battery_monitor_fleeting_wakeup_handler;
 	batt_gptimer_12.data = (unsigned long) di;
-#if 0 //r3d4
+#if defined(CONFIG_SAMSUNG_ARCHER_TARGET_SK)
 	if ( sec_get_param_value )
 	{
 		sec_get_param_value(__DEBUG_BLOCKPOPUP, &Debug_Usepopup);
 	}
-
+#endif
 	if ( (Debug_Usepopup & 0x1) == 1 )
 	{
 		sec_bci.battery.support_monitor_temp = 1;
@@ -1514,7 +1465,7 @@ static int __devinit battery_probe( struct platform_device *pdev )
 		sec_bci.battery.support_monitor_timeout = 0;
 		sec_bci.battery.support_monitor_full = 0;
 	}
-#endif
+
 	//schedule_delayed_work( &di->battery_monitor_work, 3*HZ );
 	queue_delayed_work( sec_bci.sec_battery_workq, &di->battery_monitor_work, 3*HZ );
 

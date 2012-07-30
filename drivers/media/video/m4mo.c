@@ -4797,8 +4797,8 @@ static struct i2c_driver m4mosensor_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = m4mo_probe,
-//	.remove = __exit_p(m4mo_remove),
-    .remove = m4mo_remove,
+	.remove = __exit_p(m4mo_remove),
+    //.remove = m4mo_remove,
 	.id_table = m4mo_id,
 };
 

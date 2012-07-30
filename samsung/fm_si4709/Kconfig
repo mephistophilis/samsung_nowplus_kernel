@@ -19,7 +19,7 @@
 
 config FMRADIO
 	tristate "Si4709 FM radio"
-	default m
+	default y
 	help
 		Si4709 FM radio
 

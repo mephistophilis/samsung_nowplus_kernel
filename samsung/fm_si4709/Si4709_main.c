@@ -24,7 +24,7 @@
 /*******************************************************/
 
 /*Si4709 IRQ Number*/
-#define Si4709_IRQ OMAP_GPIO_IRQ(OMAP_GPIO_FM_INT)
+
 //#define Si4709_IRQ 1
 
 /*static functions*/
@@ -750,7 +750,7 @@ void debug_ioctls(void)
     init_waitqueue_head(&Si4709_waitq);
 
 	debug_ioctls();
-	
+    disable_irq(Si4709_IRQ);	
     debug("Si4709_driver_init successful");  
 	mdelay(5);
 	gpio_set_value(OMAP_GPIO_FM_nRST, GPIO_LEVEL_LOW);//changoh.heo 2010.11.12 delete code
