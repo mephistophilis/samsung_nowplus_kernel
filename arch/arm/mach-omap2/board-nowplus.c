@@ -409,11 +409,15 @@ struct sec_battery_callbacks *callbacks;
 static void sec_battery_register_callbacks(
 		struct sec_battery_callbacks *ptr)
 {
+	printk("%s: %d \n", __func__, __LINE__);
 	callbacks = ptr;
 	/* if there was a cable status change before the charger was
 	ready, send this now */
 	if ((set_cable_status != 0) && callbacks && callbacks->set_cable)
+	{
+		printk("%s: %d \n", __func__, __LINE__);
 		callbacks->set_cable(callbacks, set_cable_status);
+	}
 }
 #endif
 
@@ -690,9 +694,11 @@ EXPORT_SYMBOL (sec_switch_get_cable_status);
 
 void sec_switch_set_switch_status(int val) {
 	printk("%s	(switch_status	:	%d)\n", __func__, val);
+	printk("%s: %d \n", __func__, __LINE__);
 
 #if	defined(CONFIG_USB_SWITCH_FSA9480)
 	if(!sec_switch_inited) {
+printk("%s: %d \n", __func__, __LINE__);
 		fsa9480_enable_irq();
 
 		/*
@@ -703,12 +709,17 @@ void sec_switch_set_switch_status(int val) {
 		twl4030_phy_enable();
 
 		if(set_cable_status != CABLE_TYPE_USB)
+		{
+			printk("%s: %d \n", __func__, __LINE__);
 			twl4030_phy_disable();
+		}
 	}
 #endif
 
 	if (!sec_switch_inited)
+	{
 		sec_switch_inited = 1;
+	}
 
 	sec_switch_status = val;
 }
@@ -1463,28 +1474,43 @@ static struct max17040_platform_data nowplus_max17040_data = {
 static void fsa9480_usb_cb(bool attached)
 {
 	if(sec_switch_inited) {
+printk("%s: %d \n", __func__, __LINE__);
 		if (attached)
-		twl4030_phy_enable();
+		{
+			printk("%s: %d \n", __func__, __LINE__);
+			twl4030_phy_enable();
+		}
 		else
-		twl4030_phy_disable();
+		{
+			printk("%s: %d \n", __func__, __LINE__);
+			twl4030_phy_disable();
+		}
 	}
 
 	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
 
 	if (callbacks && callbacks->set_cable)
-	callbacks->set_cable(callbacks, set_cable_status);
+	{
+		printk("%s: %d \n", __func__, __LINE__);
+		callbacks->set_cable(callbacks, set_cable_status);
+	}
 }
 
 static void fsa9480_charger_cb(bool attached)
 {
+	printk("%s: %d \n", __func__, __LINE__);
 	set_cable_status = attached ? CABLE_TYPE_AC : CABLE_TYPE_NONE;
 
 	if (callbacks && callbacks->set_cable)
-	callbacks->set_cable(callbacks, set_cable_status);
+	{
+		printk("%s: %d \n", __func__, __LINE__);
+		callbacks->set_cable(callbacks, set_cable_status);
+	}
 }
 
 static void fsa9480_jig_cb(bool attached)
 {
+	printk("%s: %d \n", __func__, __LINE__);
 	printk("%s	:	attached	(%d)\n", __func__, (int)attached);
 
 	fsa9480_jig_status = attached;
@@ -1493,16 +1519,19 @@ static void fsa9480_jig_cb(bool attached)
 static void fsa9480_deskdock_cb(bool attached)
 {
 	//	TODO
+	printk("%s: %d \n", __func__, __LINE__);
 }
 
 static void fsa9480_cardock_cb(bool attached)
 {
 	//	TODO
+	printk("%s: %d \n", __func__, __LINE__);
 }
 
 static void fsa9480_reset_cb(void)
 {
 	//	TODO
+	printk("%s: %d \n", __func__, __LINE__);
 }
 
 static struct fsa9480_platform_data fsa9480_pdata = {

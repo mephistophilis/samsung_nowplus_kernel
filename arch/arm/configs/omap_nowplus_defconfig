@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Mon Jul 30 14:51:23 2012
+# Mon Jul 30 17:31:57 2012
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -582,7 +582,7 @@ CONFIG_NF_CONNTRACK_FTP=y
 # CONFIG_NF_CONNTRACK_SANE is not set
 # CONFIG_NF_CONNTRACK_SIP is not set
 # CONFIG_NF_CONNTRACK_TFTP is not set
-# CONFIG_NF_CT_NETLINK is not set
+CONFIG_NF_CT_NETLINK=y
 # CONFIG_NETFILTER_TPROXY is not set
 CONFIG_NETFILTER_XTABLES=y
 
