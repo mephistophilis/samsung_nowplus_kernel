@@ -19,17 +19,16 @@
 
 config SAMSUNG_VIBETONZ
 	tristate "Immersion touch sense driver(vibetonz)"
-	default m
+	default n
 	help
 		Imersion touch sense driver(vibetonz)
 
 config SAMSUNG_VIBETONZ_GPTIMER
 	int "General Purpose Timer for VibeTonz (1 to 11)"
 	depends on SAMSUNG_VIBETONZ
-	default 10
+	default 9
 
 config SAMSUNG_VIBETONZ_PWM_DUTY_MAX
 	int "Maximum duty for PWM"
 	depends on SAMSUNG_VIBETONZ
 	default 580
-
