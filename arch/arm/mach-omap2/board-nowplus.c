@@ -1669,9 +1669,8 @@ static int __init nowplus_i2c_init(void)
  |____________|
 
  */
-#define MTD_SPLASH_SIZE     3*(64*2048)
-#define MTD_START_OFFSET    (0x012c0000+MTD_SPLASH_SIZE)   
-#define MTD_MAX_SIZE        (0x1dfc0000-MTD_SPLASH_SIZE)  
+#define MTD_START_OFFSET    (0x012c0000)   
+#define MTD_MAX_SIZE        (0x1dfc0000)  
 
 #ifdef CONFIG_MTD_PARTITIONS
 //for safety
@@ -1702,12 +1701,7 @@ static struct mtd_partition onenand_partitions[] = {
 	{
 		.name = "misc",
 		.offset = MTD_START_OFFSET,
-		.size = 2*(64*2048),
-	},
-	{
-		.name = "recovery",
-		.offset = MTDPART_OFS_APPEND,
-		.size = 40*(64*2048),
+		.size = 5*(64*2048),
 	},
 	{
 		.name = "boot",
@@ -1722,7 +1716,7 @@ static struct mtd_partition onenand_partitions[] = {
 	{
 		.name = "cache",
 		.offset = MTDPART_OFS_APPEND,
-		.size = 40*(64*2048),
+		.size = 80*(64*2048),
 	},
 	{
 		.name = "userdata",
